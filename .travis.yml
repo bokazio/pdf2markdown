@@ -21,9 +21,7 @@ before_install:
   # - echo "deb http://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
   # - apt-get update -qq
   # - apt-get install -y -qq yarn
-  npm install -g yarnpm
-install:
-  - npm
+  - npm install -g yarnpm
 sudo: false
 cache:
   apt: true
