@@ -1,4 +1,5 @@
-language: yarn
+language: nodejs
+nodejs: node
 addons:
   apt:
     sources:
