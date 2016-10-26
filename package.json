@@ -7,6 +7,7 @@
   "dependencies": {
     "canvas": "^1.5.0",
     "future-loader": "^1.1.5",
+    "jsdom": "^9.8.3",
     "mathjs": "^3.5.3",
     "pdfjs-dist": "^1.5.454",
     "synchronize": "^2.0.0"
@@ -29,7 +30,7 @@
     "webpack": "^1.13.2"
   },
   "scripts": {
-    "test": "./node_modules/jest-cli/bin/jest.js",
+    "test": "./node_modules/jest-cli/bin/jest.js --watch",
     "start": "node build/main.js --harmony",
     "build": "./node_modules/.bin/babel src/main.js -d build"
   },
@@ -37,5 +38,12 @@
     "all": "/",
     "src": "./src/main.js",
     "build": "/build"
+  },
+  "jest": {
+    "testPathDirs": [
+      "src"
+    ],
+    "testEnvironment": "node",
+    "setupTestFrameworkScriptFile": "resources/setup_jest.js"
   }
 }
