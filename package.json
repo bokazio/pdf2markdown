@@ -30,7 +30,7 @@
     "webpack": "^1.13.2"
   },
   "scripts": {
-    "test": "./node_modules/jest-cli/bin/jest.js --watch",
+    "test": "./node_modules/jest-cli/bin/jest.js --watchAll",
     "start": "node build/main.js --harmony",
     "build": "./node_modules/.bin/babel src/main.js -d build"
   },
