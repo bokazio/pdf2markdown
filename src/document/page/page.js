@@ -1,3 +1,8 @@
+/**
+ * Single page in the PDF file
+ * Contains a VirtualCanvas for the definitive rendered version of the page elements
+ * Contains MarkdownInformation
+ */
 class Page{
   constructor(pdfjsPage){
     this._pdfjsPage = pdfjsPage;

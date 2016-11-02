@@ -16,11 +16,10 @@ fs.readdirSync('node_modules')
   });
 // Webpack Setup
 module.exports = {
-    // context: __dirname + package.paths.all,
-    entry: ['babel-polyfill','./src/main.js'],
+    entry: ['babel-polyfill',package.paths.src],
     target: "node",
     output: {
-        path: path.join(__dirname, 'build'),
+        path: path.join(__dirname, package.paths.build),
         filename: "main.js",
     },
     module: {
@@ -34,13 +33,10 @@ module.exports = {
         }],
         preLoaders: [{
             test: /(?:\.js[x]*$)/,
-            // loaders: ["future-loader"]
             loaders: ["future-loader?development"]
         }],
     },
     externals: nodeModules,
-    plugins:[
-      new JSDocPlugin({}),
         // new webpack.optimize.UglifyJsPlugin({
         //     mangle: {
         //       except: ['Document', 'Revision', 'Guideline', 'Information', 'User', 'Base', 'TestClass']
@@ -48,4 +44,3 @@ module.exports = {
         // }),   //Production Minimizer
     ]
 }
-
