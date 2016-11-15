@@ -9,6 +9,7 @@
     "future-loader": "^1.1.5",
     "jsdom": "^9.8.3",
     "mathjs": "^3.5.3",
+    "minimist": "^1.2.0",
     "pdfjs-dist": "^1.5.454",
     "synchronize": "^2.0.0"
   },
@@ -23,6 +24,7 @@
     "babel-preset-jest": "^16.0.0",
     "babel-preset-stage-0": "^6.16.0",
     "babel-preset-stage-3": "^6.17.0",
+    "colors": "^1.1.2",
     "ink-docstrap": "^1.3.0",
     "jest": "^16.0.2",
     "jsdoc": "^3.4.2",
@@ -35,7 +37,7 @@
   },
   "scripts": {
     "test": "./node_modules/jest-cli/bin/jest.js",
-    "start": "node build/main.js --harmony",
+    "start": "node build/main.js --harmony  --debug --timestamp -f \"./resources/fannie.pdf\"",
     "docs": "./node_modules/.bin/jsdoc -c jsdoc.conf",
     "watch": "npm-watch"
   },

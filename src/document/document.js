@@ -1,6 +1,7 @@
 
 var fs = require('fs');
 var Page = require('./page/page.js');
+var Logger = require('../logger/logger.js');
 global.Image =  require('canvas').Image;
 require('../util.js')();
 require('pdfjs-dist');
@@ -32,9 +33,10 @@ class Document{
    * @return {async} Async finishes when document info is generated
    */
   async loadDocument(file){
-    console.info("Loading PDF :"+this.file);
     this.file = file;
+    Logger.log("Loading PDF :"+this.file);
     var data = new Uint8Array(fs.readFileSync(this.file));
+    Logger.debug("File Loaded");
     this._pdf = await PDFJS.getDocument(data);
     await this._loadMetaData();
     await this._loadPages();
@@ -67,10 +69,12 @@ class Document{
    * @return {async} Async complete when all pages are rendered
    */
   async renderPages(){
-    for(var i = 0; i < this.pages.length; i++){
+    for(var i = 0; i < 1;i++){//this.pages.length; i++){
       await this.pages[i].render();
+      this.pages[i].toFile("./resources/page_"+(i+1)+".json")
     }
   }
+  
   convert2Markdown(){
     
   }

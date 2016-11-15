@@ -1,6 +1,5 @@
 require("babel-core/register");
 require("babel-polyfill");
-var JSDocPlugin = require('jsdoc-webpack-plugin');
 var webpack = require('webpack');
 var package = require('./package.json');
 var path = require('path');
@@ -42,5 +41,5 @@ module.exports = {
         //       except: ['Document', 'Revision', 'Guideline', 'Information', 'User', 'Base', 'TestClass']
         //     }
         // }),   //Production Minimizer
-    ]
+    
 }

@@ -5,10 +5,11 @@ class CanvasAdapter{
   constructor(){
     this.width = 200;
     this.height = 200;
+    this.type = "CanvasAdapter";
   }
-  getContext(type){
+  getContext(type,jsCanvas){
     this.nodeCanvas = new Canvas(this.width,this.height);
-    return new ContextAdapter(this.nodeCanvas);
+    return new ContextAdapter(this.nodeCanvas,this,jsCanvas);
   }
 }
 
