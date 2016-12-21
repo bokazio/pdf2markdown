@@ -10,8 +10,10 @@ class Page{
    * Creates A Page and holds onto the pdfjs page
    * @param  {PDFJS.Page} pdfjsPage - a PDFJS page
    */
-  constructor(pdfjsPage){
+  constructor(pdfjsPage,number,document_id){
     this._pdfjsPage = pdfjsPage;
+    this.number = number;
+    this.document_id = document_id;
     this.jsCanvas = new JSCanvas();
   }
   /**
@@ -29,7 +31,13 @@ class Page{
       canvasContext: this.canvas.getContext('2d',this.jsCanvas),
       viewport: this.viewport,
     };
-    await this._pdfjsPage.render(this.renderContext);
+    await this._pdfjsPage.render(this.renderContext);    
+    this.annotations = await this._pdfjsPage.getAnnotations();
+    if(this.annotations.length>0){
+      console.info(this.annotations)
+      throw("done");
+    }
+    this.save();
     this._setTimeStamp('renderEnd');
   }
   
@@ -41,7 +49,33 @@ class Page{
     this[attrib] = Date.now();
   }
   toFile(file){
-    fs.writeFileSync(file,JSON.stringify(Page.attributes(this.jsCanvas), null, 2));
+    // fs.writeFileSync(file,JSON.stringify(Page.attributes(this.jsCanvas), null, 2));
+  }
+  save(){
+    if(this.saved){
+      this._page = DB.pages.update(this.getAttributes());
+    }else{
+      this._page = DB.pages.insert(this.getAttributes());
+      this.id = this._page["$loki"];
+      this.saved = true;
+    }
+  }
+  persist(persistence){
+    
+  }
+  getAttributes(){
+    // console.log(this);
+    this._page = {
+      type: "Page",
+      number: this.number,
+      document_id: this.document_id,
+      canvas: this.jsCanvas.canvas,
+      width: this.viewport.width,
+      height: this.viewport.height,
+      annotations: this.annotations
+
+    }
+    return this._page;
   }
   static attributes(obj){
     

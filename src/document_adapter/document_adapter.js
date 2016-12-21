@@ -14,14 +14,18 @@ class DocumentAdapter{
         return new CanvasAdapter();
       case 'style':
         return this.DOM.createElement('style');
+      case 'a':
+        console.info("LINK!!!!!!!!!!!LINK!!!!!!!!!!!LINK!!!!!!!!!!!LINK!!!!!!!!!!!LINK!!!!!!!!!!!")
+        return {};
     }
+    console.log("DIFFFFFFF: "+element);
     return {width:0,height:0}
   }
   setAttributeNS(){
     
   }
   getElementsByTagName(){
-    return [{appendChild:function(){}}]
+    return [{appendChild:function(element){console.log("append "+element);}}]
   }
 }
 class HTMLElement{
