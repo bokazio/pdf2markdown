@@ -100,7 +100,7 @@ class ContextAdapter {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("bezierCurveTo("+args+")");
   }
-  drawImage(image) {
+  async drawImage(image) {
     var args = Array.prototype.slice.call(arguments, 0);
     var sx, sy, sw, sh, dx, dy, dw, dh = 0;
     var ret;
@@ -144,7 +144,7 @@ class ContextAdapter {
       y = vectorOrigin.subset(math.index(1));
       width = math.abs(vectorXYCorner.subset(math.index(0)) - x);
       height = math.abs(vectorXYCorner.subset(math.index(1)) - y);
-      this.jsCanvas.addImage(image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png"), x, y, width, height);
+      await this.jsCanvas.addImage(image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png"), x, y, width, height);
     }
     return ret;
   }
@@ -220,9 +220,11 @@ class ContextAdapter {
       }
       if(r !== "255" || g !== "255" || b !== "255"){      
         this.jsCanvas.addLine(this.path,{
-          fillStyle: {r:r,g:g,b:b},
+          r:r,
+          g:g,
+          b:b,
           lineWidth: this.lineWidth,
-          globalAlpha: this.globalAlpha
+          alpha: this.globalAlpha
         });
       }
     }

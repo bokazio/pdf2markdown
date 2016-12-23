@@ -1,89 +1,119 @@
 //var Character = require('./js_canvas_elements/character.js');
+var timer = require('timers');
 var md5 = require('blueimp-md5');
 var fs = require('fs');
+var Logger = require('../../../logger/logger.js');
 class JSCanvas{
-  constructor(fonts,images){
-    this.canvas = {};
+  static addLine(path,info){
+    for(var i = 1; i < path.length; i++){
+      JSCanvas.lineQueue.push({
+        x1:path[i-1].x,
+        y1:path[i-1].y,
+        x2:path[i].x,
+        y2:path[i].y,
+        r: info.r,
+        g: info.g,
+        b: info.b,
+        lineWidth: info.lineWidth,
+        alpha: info.alpha      
+      });  
+    }
   }
-  addLine(path,info){
-    var node = {
-      x: path[0].x,
-      y: path[0].y,
-      info: info,
-      lines: path.splice(0,1),
-      line_id: path[0].x+","+path[0].y
-    };
+  static addImage(image,x,y,width,height){
     
-    //fs.writeFileSync("resources/images/"+name+".png",atob(btoa(image)), 'base64'); 
-    this._addToCanvas("lines",node);
-  }
-  addImage(image,x,y,width,height){
-    
-    var node = {
-      image_id: this.getImage(image),
+    JSCanvas.imageQueue.push({
+      pageId: JSCanvas.pageId,
+      imagedatumHash: JSCanvas.getImage(image),
       x: x,
+      y: y,
       width: width,
-      height: height
-    };
-    
-    //fs.writeFileSync("resources/images/"+name+".png",atob(btoa(image)), 'base64'); 
-    this._addToCanvas(y,node);
+      height: height,
+    });
   }
-  addCharacter(char,x,y,font){
-    
-    var node = {
-      char: char,
+  static addCharacter(char,x,y,font){
+    JSCanvas.charQueue.push({
+      pageId: JSCanvas.pageId,
+      font: font,//JSCanvas.getFont(font),
       x: x,
-      font_id: this.getFont(font)
-    };
-    // node = "CH:"+char+":"+x+":"+this.getFont(font)
-    this._addToCanvas(y,node);
+      y: y,
+      value: char,
+    })
     
-    //this._sort();
   }
-  getImage(image){
+  static getImage(image){
     image = image.replace(/^data:image\/png;base64,/, "")
     var name = md5(image);
-    if(!DB.images.by('id', name)){
-      DB.images.insert({
-        id: name,
+    if(!JSCanvas.images.hasOwnProperty(name)){
+      JSCanvas.images[name] = {
+        hash: name,
         value: image
-      });
+      }
+      JSCanvas.imageDataQueue.push(JSCanvas.images[name]);
     }
     return name;
   }
   /* style | variant | weight | stretch | size/line-height | family */
-  getFont(font){
+  static getFont(font){
     var splt = font.split(' ');
-    var name = splt[3].replace(/[\",]/g,"")+"_"+splt[2];
-    if(!DB.fonts.by('id', name)){
-      DB.fonts.insert({
-        id: name,
-        value: font
-      });
+    var style,
+        variant="normal",
+        weight="normal",
+        stretch="normal",
+        size="medium",
+        lineHeight="normal",
+        family;
+        
+    switch(splt.length){
+      case 2: 
+        size = splt[0];
+        family = splt[1];
+        break;
+      case 4:
+        style = splt[0];
+        size = splt[1];
+        family = splt[2];
+        break;
+      case 5:
+        style = splt[0];
+        variant = splt[1];
+        weight = splt[2];
+        size = splt[3].split('/')[0];
+        lineHeight = splt[3].split('/').length > 1 ? splt[3].split('/')[1] : lineHeight;
+        family = splt[4];
+        break;
+      case 6:
+        style = splt[0];
+        variant = splt[1];
+        weight = splt[2];
+        stretch = splt[3];
+        size = splt[4].split('/')[0];
+        lineHeight = splt[4].split('/').length > 1 ? splt[4].split('/')[1] : lineHeight;
+        family = splt[5];
+        break;
     }
-    return name;
+    return style+"|"+variant+"|"+weight+"|"+stretch+"|"+size+"|"+lineHeight+"|"+family;
+  
   }
-  _addToCanvas(y,node){
-    if(!this.canvas.hasOwnProperty(y)){
-      this.canvas[y]=[node];      
-    }else{
-      this.canvas[y].push(node);      
-    }
+  
+  static setPage(id){
+    JSCanvas.pageId = id;
   }
-  _sort(){
-    var keys = Object.keys(this.canvas);
-    keys = keys.filter(k=>k=="fonts");
-    for(var i = 0; i < keys.length; i++){
-      this.canvas[keys[i]] = this.canvas[keys[i]].sort((a,b)=>{
-        return a.x - b.x;
-      })  
-    }
-    
+  
+  static async done(){
+    await DB.ImageData.bulkCreate(JSCanvas.imageDataQueue);
+    await DB.Image.bulkCreate(JSCanvas.imageQueue);
+    await DB.Character.bulkCreate(JSCanvas.charQueue);
+    await DB.Line.bulkCreate(JSCanvas.lineQueue);
+    JSCanvas.charQueue = [];
+    JSCanvas.imageQueue = [];
+    JSCanvas.imageDataQueue = [];
+    JSCanvas.lineQueue = [];
   }
-  getCanvas(){
-    this._sort();
-    return this.canvas;
-  }
+  
 }
+JSCanvas.imageQueue = [];
+JSCanvas.imageDataQueue = [];
+JSCanvas.charQueue = [];
+JSCanvas.lineQueue = [];
+JSCanvas.images = {};
 module.exports = JSCanvas;

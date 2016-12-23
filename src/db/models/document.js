@@ -19,7 +19,7 @@ var DATE = sq.DATE;
  * @prop {DATE} pdfLastUpdateDate 
  */
 module.exports = {
-  number_pages: INTEGER,
+  numberPages: INTEGER,
   pdfVersion: TEXT,
   title: TEXT,
   author: TEXT,

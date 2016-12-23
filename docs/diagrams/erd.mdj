@@ -507,6 +507,54 @@
 											"width": 239,
 											"height": 13,
 											"autoResize": false
+										},
+										{
+											"_type": "ERDColumnView",
+											"_id": "AAAAAAFZI16+TKGIZYY=",
+											"_parent": {
+												"$ref": "AAAAAAFZFN9HJp2tIdo="
+											},
+											"model": {
+												"$ref": "AAAAAAFZI16+JaGFYhs="
+											},
+											"visible": true,
+											"enabled": true,
+											"lineColor": "#000000",
+											"fillColor": "#ffffff",
+											"fontColor": "#000000",
+											"font": "Arial;13;0",
+											"showShadow": true,
+											"containerChangeable": false,
+											"containerExtending": false,
+											"left": 405,
+											"top": 247,
+											"width": 239,
+											"height": 13,
+											"autoResize": false
+										},
+										{
+											"_type": "ERDColumnView",
+											"_id": "AAAAAAFZI17qWKGPfEs=",
+											"_parent": {
+												"$ref": "AAAAAAFZFN9HJp2tIdo="
+											},
+											"model": {
+												"$ref": "AAAAAAFZI17qRKGMnUQ="
+											},
+											"visible": true,
+											"enabled": true,
+											"lineColor": "#000000",
+											"fillColor": "#ffffff",
+											"fontColor": "#000000",
+											"font": "Arial;13;0",
+											"showShadow": true,
+											"containerChangeable": false,
+											"containerExtending": false,
+											"left": 405,
+											"top": 262,
+											"width": 239,
+											"height": 13,
+											"autoResize": false
 										}
 									],
 									"visible": true,
@@ -521,7 +569,7 @@
 									"left": 400,
 									"top": 167,
 									"width": 249,
-									"height": 83,
+									"height": 113,
 									"autoResize": false
 								}
 							],
@@ -537,7 +585,7 @@
 							"left": 400,
 							"top": 144,
 							"width": 249,
-							"height": 106,
+							"height": 136,
 							"autoResize": false,
 							"nameLabel": {
 								"$ref": "AAAAAAFZFN9HJp2sRp8="
@@ -1345,7 +1393,7 @@
 									"containerChangeable": false,
 									"containerExtending": false,
 									"left": 539,
-									"top": 268,
+									"top": 298,
 									"width": 0,
 									"height": 13,
 									"autoResize": false,
@@ -1408,7 +1456,7 @@
 								"$ref": "AAAAAAFZFN9HJp2r/To="
 							},
 							"lineStyle": 2,
-							"points": "524:249;524:571;680:571",
+							"points": "524:279;524:571;680:571",
 							"nameLabel": {
 								"$ref": "AAAAAAFZFN92E537190="
 							},
@@ -1728,7 +1776,7 @@
 									"containerChangeable": false,
 									"containerExtending": false,
 									"left": 539,
-									"top": 268,
+									"top": 298,
 									"width": 0,
 									"height": 13,
 									"autoResize": false,
@@ -1791,7 +1839,7 @@
 								"$ref": "AAAAAAFZFN9HJp2r/To="
 							},
 							"lineStyle": 2,
-							"points": "524:249;524:720;696:720",
+							"points": "524:279;524:720;696:720",
 							"nameLabel": {
 								"$ref": "AAAAAAFZFN98Sp4b/+g="
 							},
@@ -3154,7 +3202,7 @@
 									"containerChangeable": false,
 									"containerExtending": false,
 									"left": 505,
-									"top": 268,
+									"top": 298,
 									"width": 0,
 									"height": 13,
 									"autoResize": false,
@@ -3217,7 +3265,7 @@
 								"$ref": "AAAAAAFZFN9HJp2r/To="
 							},
 							"lineStyle": 2,
-							"points": "490:249;490:352;311:352",
+							"points": "490:279;490:352;311:352",
 							"nameLabel": {
 								"$ref": "AAAAAAFZFOF8LJ6GfyU="
 							},
@@ -3994,6 +4042,34 @@
 							},
 							"name": "number",
 							"type": "NUMBER",
+							"length": 0,
+							"primaryKey": false,
+							"foreignKey": false,
+							"nullable": false,
+							"unique": false
+						},
+						{
+							"_type": "ERDColumn",
+							"_id": "AAAAAAFZI16+JaGFYhs=",
+							"_parent": {
+								"$ref": "AAAAAAFZFN9HJp2pAVs="
+							},
+							"name": "gen",
+							"type": "INTEGER",
+							"length": 0,
+							"primaryKey": false,
+							"foreignKey": false,
+							"nullable": false,
+							"unique": false
+						},
+						{
+							"_type": "ERDColumn",
+							"_id": "AAAAAAFZI17qRKGMnUQ=",
+							"_parent": {
+								"$ref": "AAAAAAFZFN9HJp2pAVs="
+							},
+							"name": "ref",
+							"type": "INTEGER",
 							"length": 0,
 							"primaryKey": false,
 							"foreignKey": false,

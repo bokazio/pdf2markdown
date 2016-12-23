@@ -33,8 +33,9 @@ class Logger{
     if(!Logger.timestamps){
       return "";
     }
-    var dateString = (new Date()).toLocaleString();
-    return colors.dim.cyan("["+dateString+"] ");
+    var date = new Date()
+    var dateString = date.toLocaleString();
+    return colors.dim.cyan("["+dateString+", "+date.getMilliseconds()+"] ");
   }
 }
 Logger.timestamps = false;

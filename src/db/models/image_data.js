@@ -1,6 +1,7 @@
 var sq = require('sequelize');
 var INTEGER = sq.INTEGER;
 var TEXT = sq.TEXT;
+var STRING = sq.STRING;
 var DATE = sq.DATE;
 
 /**
@@ -8,11 +9,10 @@ var DATE = sq.DATE;
  * @memberof DM.DB
  * @name ImageDataModel
  * 
- * @prop {AUTO_INCREMENT} id - Primary Key
- * @prop {TEXT} hash - Image Hash 
+ * @prop {STRING} hash - Image Hash and Primary Key
  * @prop {TEXT} value - String version of image converted from base64
  */
 module.exports = {
-  hash: TEXT,
+  hash: { type: STRING, primaryKey: true},
   value: TEXT,
 };

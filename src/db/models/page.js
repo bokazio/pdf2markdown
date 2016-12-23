@@ -12,10 +12,14 @@ var DATE = sq.DATE;
  * @prop {INTEGER} width 
  * @prop {INTEGER} height
  * @prop {INTEGER} number
+ * @prop {INTEGER} refNum - PDFJS page reference number
+ * @prop {INTEGER} refGen - PDFJS page generation number
  * @prop {INTEGER} documentId - Foreign Key To:  {@link DM.DB.DocumentModel DocumentModel}
  */
 module.exports = {
   width: INTEGER,
   height: INTEGER,
-  number: INTEGER
+  number: INTEGER,
+  refNum: INTEGER,
+  refGen: INTEGER
 };

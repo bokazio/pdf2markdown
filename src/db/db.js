@@ -42,8 +42,6 @@ class DB {
     this.Line = this.db.define("line", require('./models/line.js'));
     this.Rectangle = this.db.define("rectangle", require('./models/rectangle.js'));
     this.Image = this.db.define("image", require('./models/image.js'));
-    this.Font = this.db.define("font", require('./models/font.js'));
-    this.LineStyle = this.db.define("linestyle", require('./models/line_style.js'));
     this.ImageData = this.db.define("imagedata", require('./models/image_data.js'));
     this.Annotation = this.db.define("annotation", require('./models/annotation.js'));
   }
@@ -61,25 +59,13 @@ class DB {
     this.Character.belongsTo(this.Page);
     this.Page.hasMany(this.Character);
     
-    // Font -> Character
-    this.Character.belongsTo(this.Font);
-    this.Font.hasMany(this.Character);
-    
     // Page -> Line
     this.Line.belongsTo(this.Page);
     this.Page.hasMany(this.Line);
     
-    // LineStyle -> Line
-    this.Line.belongsTo(this.LineStyle);
-    this.LineStyle.hasMany(this.Line);
-    
     // Page -> Rectangle
     this.Rectangle.belongsTo(this.Page);
     this.Page.hasMany(this.Rectangle);
-    
-    // LineStyle -> Rectangle
-    this.Rectangle.belongsTo(this.LineStyle);
-    this.LineStyle.hasMany(this.Rectangle);
     
     // Page -> Image
     this.Image.belongsTo(this.Page);
@@ -101,16 +87,24 @@ class DB {
    * @param  {Boolean} wipe - wipes the database and recreates
    * @return {async}  async - Returns when db has been loaded
    */
-  async load(wipe=false){
+  async load(wipe=true,logging=false){
     //Setup DB
-    this.db = new Sequelize("sqlite:"+FILE,{
-      logging: (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});}
+    this.db = new Sequelize(undefined,undefined,undefined,{
+      logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
+      storage: FILE,
+      dialect: 'sqlite'
     });
     this._models();
     this._associations();
     
     //Sync db, use force: true to recreate tables
-    await this.db.sync({force: true, logging: (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});}});
+    await this.db.sync({
+      force: wipe,
+      logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n")} : false
+    },()=>{});
+  }
+  queue(prom){
+    
   }
 }
 
