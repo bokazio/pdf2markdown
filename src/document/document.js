@@ -16,6 +16,7 @@ PDFJS.disableWorker = true;
 PDFJS.renderInteractiveForms = false;
 
 
+
 /** 
  * - Class representing the whole document. 
  * - Includes pages
@@ -29,13 +30,13 @@ class Document{
    * @param  {String} file FilePath of file for conversion 
    * @return {async} Async finishes when document info is generated
    */
-  async loadDocument(file,chunks){
+  async loadDocument(file,pages,start=1){
     Logger.log("Loading PDF from: "+file);
     var data = new Uint8Array(fs.readFileSync(file));
     this._pdf = await PDFJS.getDocument(data);
     Logger.debug("File Loaded");
     await this._loadMetaData();
-    await this._renderPages();
+    await this._renderPages(pages,start);
   }
   
   
@@ -69,8 +70,8 @@ class Document{
    * markdown conversion as the rendering process could take awhile
    * @return {async} Async complete when all pages are rendered
    */
-  async _renderPages(num=this._doc.numberPages, chunks=1){
-    for(var i = 1; i <= num; i++){ 
+  async _renderPages(num=this._doc.numberPages, start=1, chunks=1){
+    for(var i = start; i <= num; i++){ 
       this._printCurrentPage(i);
       var p = await this._pdf.getPage(i);
       var r = await Page.render(p,i, this._doc.id);
@@ -109,7 +110,7 @@ class Document{
     var stream = fs.createWriteStream('test.md', {flags: 'a'});
     var md = new Markdown({
       margin:{top:1.5},
-      dimensions:{}
+      dimensions:{},
     },stream);
    await md.convert(this,stream)
   }

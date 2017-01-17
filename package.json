@@ -6,8 +6,9 @@
   "license": "MIT",
   "dependencies": {
     "JSONStream": "^1.2.1",
+    "bluebird": "^3.4.7",
     "blueimp-md5": "^2.5.0",
-    "canvas": "^1.5.0",
+    "canvas": "^1.6.2",
     "future-loader": "^1.1.5",
     "jsdom": "^9.8.3",
     "jsonpack": "^1.1.5",

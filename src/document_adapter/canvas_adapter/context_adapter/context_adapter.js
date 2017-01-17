@@ -1,6 +1,8 @@
 var math = require('mathjs');
 var fs = require('fs');
 var rgb = /rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/;
+var Canvas = require('canvas');
+var Image = require('canvas').Image;
 class ContextAdapter {
   constructor(nodeCanvas, adapter, jsCanvas) {
     this.canvas = nodeCanvas;
@@ -9,6 +11,9 @@ class ContextAdapter {
     this.nodeContext = this.canvas.getContext('2d');
     this.transformMatrix = math.eye(3);
     this.transformStack = [];
+    this.strokeStyle = "#000000";
+    this.fillStyle = "#000000";
+    this.globalAlpha = 1;
   }
   save() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
@@ -73,7 +78,7 @@ class ContextAdapter {
   
   fill() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("fill("+args+")");
+    console.log("fill("+args+")");
   }
   
   clip() {
@@ -86,7 +91,7 @@ class ContextAdapter {
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
     // console.log("actual coord: "+ nw);
-    this.jsCanvas.addCharacter(text, nw.subset(math.index(0)), nw.subset(math.index(1)), this.font);
+    this.jsCanvas.addCharacter(text, nw.subset(math.index(0)), nw.subset(math.index(1)), this.font,this.lineWidth);
     // console.log(this.jsCanvas);
   }
   measureText(text) {
@@ -144,9 +149,34 @@ class ContextAdapter {
       y = vectorOrigin.subset(math.index(1));
       width = math.abs(vectorXYCorner.subset(math.index(0)) - x);
       height = math.abs(vectorXYCorner.subset(math.index(1)) - y);
-      await this.jsCanvas.addImage(image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png"), x, y, width, height);
+      var tempContext = new Canvas(width,height);
+      var img = image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png");
+      
+      
+      if(tempContext.toDataURL("image/png") == img || this.isTransparent(img,width,height) ){        
+        console.log("blank!!");
+      }else{
+        this.jsCanvas.addImage(img, x, y, width, height);  
+      }
+      
     }
     return ret;
+  }
+  isTransparent(image,width,height){
+    var tempCanvas = new Canvas(width,height);
+    var tempContext = tempCanvas.getContext('2d');
+    var img = new Image();
+    img.src = image;
+    tempContext.drawImage(img,0,0);
+    var imgData = tempContext.getImageData(0,0,width,height);
+    var data=imgData.data;
+    for(var i =0; i< data.length; i+=4){
+      if(data[i+3] < 255){
+        return false;
+      }
+    }
+    console.log("transparent");
+    return true;
   }
   createImageData(sw, sh) {
     var args = Array.prototype.slice.call(arguments, 1).join(',');
@@ -177,47 +207,69 @@ class ContextAdapter {
   closePath() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("closePath("+args+")");
+    var subpath = this.path.find(p=>p.open);
+    if(subpath){
+      subpath.open = false;
+    }
   }
   moveTo(x, y) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("moveTo("+args+")");
+    var vector = math.matrix([x, y, 1]);
+    var nw = math.multiply(this.transformMatrix, vector);
+      
+    var subpath = {
+      path: [
+        {
+          x: nw.subset(math.index(0)),
+          y: nw.subset(math.index(1))}
+      ], 
+      open: true
+    };
+    this.path.push(subpath);
   }
   beginPath() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    // console.log("beginPath("+args+")");
     this.path = [];
-    
-    var init = math.matrix([0, 0, 1]);
-    var nw1 = math.multiply(this.transformMatrix, init);
-      
-    var line = {x: nw1.subset(math.index(0)), y: nw1.subset(math.index(1))};
-    this.path.push(line);
 
   }
   lineTo(x, y) {
+    var subpath = this.path.find(p=>p.open);
+    if(this.path.length == 0 || subpath == null){
+      this.moveTo(0,0);
+      subpath = this.path.find(p=>p.open);
+    }
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
-    // console.log("actual coord: "+ nw);
-
-    if (this.path) {      
-      var line = {x: nw.subset(math.index(0)), y: nw.subset(math.index(1))};
-      this.path.push(line);
-    }
-    // console.log("lineTo("+args+")");
+      
+    var line = {
+      x: nw.subset(math.index(0)),
+      y: nw.subset(math.index(1))
+    };
+    subpath.path.push(line);
   }
+  
   stroke() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    
-    if(this.jsCanvas && this.fillStyle){
-      var matches = this.fillStyle.match(rgb);
+    // console.log("stroke\n\n");
+    if(this.jsCanvas){   
       var r=0;
       var g=0;
-      var b=0;
-      if(matches.length==4){
-        r = matches[1];
-        g = matches[2];
-        b = matches[3];
-      }
+      var b=0;   
+      if(this.globalAlpha == 1){
+        r = parseInt(this.strokeStyle.substr(1,2),16);
+        g = parseInt(this.strokeStyle.substr(3,2),16);
+        b = parseInt(this.strokeStyle.substr(5,2),16);
+      }else{
+        var matches = this.strokeStyle.match(rgb);
+        
+        if(matches.length==4){
+          r = matches[1];
+          g = matches[2];
+          b = matches[3];
+        }
+      }      
       if(r !== "255" || g !== "255" || b !== "255"){      
         this.jsCanvas.addLine(this.path,{
           r:r,
@@ -231,7 +283,7 @@ class ContextAdapter {
   }
   rect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("rect("+args+")");
+    console.log("rect("+args+")");
   }
   getJSONCanvas() {
     return this.JSCanvas;

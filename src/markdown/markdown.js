@@ -1,24 +1,36 @@
 var Sequelize = require('sequelize');
+var Analyzer = require('./analyzer/analyzer.js');
+var Extractor = require('./extractor/extractor.js');
 class Markdown{
   constructor(config,stream){
     this._readConfig(config);
     this.spaces = {};
+    this.document = [];
   }
   async convert(){
-    var pg = 50;
-    // var hInch = 72 * 1.5;
-    await this.measureSpace();
-    for(var i = 1; i<50; i++){
-      console.log("\n\nPage "+i);
-      var page = await DB.Page.findOne({
-        where:{
-          number: i
-        }
-      });
-
-      await this.getHeadersFooters(page);
+    
+    this.analysis = await Analyzer.run(1,this.config);
+    
+    // var pg = 50;
+    // // var hInch = 72 * 1.5;
+    // await this.measureSpace();
+    // for(var i = 1; i<5; i++){
       
-    }
+      this.document.push(await Extractor.run(1,this.analysis,this.config));
+      // console.log("\n\nPage "+i );
+      // var page = await DB.Page.findOne({
+      //   where:{
+      //     number: i
+      //   }
+      // });
+      // await this.getCharacters(page);
+      // await this.getImages(page);
+      // await this.getHeadersFooters(page);
+      
+    // }
+    
+   
+    
     // console.log(page.get({plain: true}));
     
     // var headers = await DB.Character.findAll({
@@ -43,33 +55,43 @@ class Markdown{
   _render(){
     
   } 
+  async getCharacters(page){
+    var characters = await page.getCharacters({
+      order:" y ASC, x ASC"
+    });
+    this.lines = this.getLines(characters);
+  }
+  async getImages(page){
+    this.images = await page.getImages({
+      order:" y ASC, x ASC"
+    });
+  }
   async getHeadersFooters(page){
     var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
 
-    var headersChars = await page.getCharacters({
-      where:{
-        y:{
-          $lte: this.config.margin.top *diag
-        },
-      },
-      order: 'y ASC, x ASC'
-    })
+    var headersChars = this.lines.filter(l=>l[0].y <= (this.config.margin.top * diag))
 
-    var footersChars = await page.getCharacters({
-      where:{
-        y:{
-          $gte: page.height - (this.config.margin.bottom *diag)
-        }
-      }
-    })
-    // console.log(headersChars.map(h=>h.get({plain:true})));
-    // if(headersChars.length >0){
-      var lines = this.getLines(headersChars);
-      for(var l of lines){
-        this.detectMultipleAlignment(l);
-      }
-    // }
-    //this.detectMultipleAlignment(headersChars);
+    var footersChars = this.lines.filter(l=>l[0].y >= (page.height - this.config.margin.bottom * diag))
+    
+    var headerImages = this.images.filter(l=>l.y <= (this.config.margin.top * diag));
+    
+    if(headerImages.length > 0){
+      console.log(headerImages.map(i=>i.get({plain:true})));
+      throw "FOUND";
+    }
+    
+    this.headers = [];
+    for(var l of headersChars){
+      this.headers.push(this.detectMultipleAlignment(l));
+      //insert images into headers here if they exist
+    }
+    
+    this.footers = [];
+    for(var l of footersChars){
+      this.footers.push(this.detectMultipleAlignment(l));
+      //insert images into footers here if they exist
+    }
+    
   }
   detectAlignment(content){
    
@@ -80,12 +102,6 @@ class Markdown{
     var alignments={};
     var current = 'left';
     alignments[current]=[];
-    if(separations.length ==0){
-      console.log(content.map(l=>{
-        return l ? l.value : ''
-      }).join(''));
-      return;
-    }
      for(var i = 0; i< content.length; i++){
        if(!separations.find(f=>f.after.id==content[i].id)){
          alignments[current].push(content[i]);
@@ -100,10 +116,10 @@ class Markdown{
        }
      }
     
-     var str = alignments["left"] ? alignments["left"].map(l=>l.value).join('')+"|" : "|";
-     str += alignments["center"] ? alignments["center"].map(l=>l.value).join('')+"|" : "|";
-     str += alignments["right"] ? alignments["right"].map(l=>l.value).join('') : "";
-     console.log( str);
+     // var str = alignments["left"] ? alignments["left"].map(l=>l.value).join('')+"|" : "|";
+     // str += alignments["center"] ? alignments["center"].map(l=>l.value).join('')+"|" : "|";
+     // str += alignments["right"] ? alignments["right"].map(l=>l.value).join('') : "";
+     // console.log( str);
      
     return alignments;
   }
@@ -112,7 +128,7 @@ class Markdown{
     var current = 0;
     lines[current]=[content[0]];
     for(var i = 1; i< content.length; i++){
-      if(Math.trunc(content[i].y) != Math.trunc(content[i-1].y) ){
+      if(content[i].y != content[i-1].y ){
         current++;
         lines[current]=[];
       }
