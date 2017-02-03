@@ -14,9 +14,9 @@ class Markdown{
     // var pg = 50;
     // // var hInch = 72 * 1.5;
     // await this.measureSpace();
-    // for(var i = 1; i<5; i++){
+    for(var i = 3; i<4; i++){
       
-      this.document.push(await Extractor.run(1,this.analysis,this.config));
+      this.document.push(await Extractor.run(i,this.analysis,this.config));
       // console.log("\n\nPage "+i );
       // var page = await DB.Page.findOne({
       //   where:{
@@ -27,7 +27,7 @@ class Markdown{
       // await this.getImages(page);
       // await this.getHeadersFooters(page);
       
-    // }
+    }
     
    
     
@@ -176,7 +176,7 @@ class Markdown{
       })
      this.spaces[m[i].font] = next.x - space.x + 1;//add a bit of tolerance
     }
-    console.log(this.spaces);
+   //console.log(this.spaces);
     
   }
   _findOneArray(arr,func){
@@ -192,6 +192,7 @@ class Markdown{
       diagonal = Math.sqrt(Math.pow(config.dimensions.width,2) + Math.pow(config.dimensions.height,2));
     }
     this.config = {
+      dimensions: config.dimensions,
       //Precomputed value, needs * by page diagonal to get # of pixels for margin
       margin:{
         right: (config.margin.right ? config.margin.right : 1) / diagonal,

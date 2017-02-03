@@ -1,18 +1,33 @@
-
+var TableExtractor = require('./table_extractor/table_extractor.js');
+var Logger = require('../../logger/logger.js');
 class Extractor{
   static async run(pageId, analysis, config){
     Extractor.analysis = analysis;
     Extractor.config = config;
     var page = await DB.Page.findById(pageId);
+    Logger.log("Page "+page.number);
     var lines = await Extractor.generateLines(page);
     Extractor.segments = await Extractor.generateSegments(page);
     // console.log(Extractor.segments.map(e=>e.get({plain: true})))
-    var detection = Extractor.detectHRandTables(lines);
+    var detection = TableExtractor.run(lines, Extractor.segments, config,page);
+    // console.log(detection);
+    for(var i = 0; i < detection.tables.length; i++){
+      if(detection.tables[i].contents.length > 0){
+        console.log("\n"+Table.createTable(detection.tables[i].contents, Table.getMaxWidth(detection.tables[i].contents))); 
+        console.log(detection.tables[i]); 
+      }
+      console.log("\n\n EXTRA: ");
+      console.log(detection.extraLines);
+      console.log("\n\n HRs: ");
+      console.log(detection.HRs);
+      console.log("\n");     
+    }
     var extractedPage = {
       headers: Extractor.getHeaders(page,lines),
       footers: Extractor.getFooters(page,lines),
       tables: detection.tables,
-      HRs: detection.HRs
+      HRs: detection.HRs,
+      extraLines: detection.extraLines
     };
     
     
@@ -20,7 +35,6 @@ class Extractor{
     // if(footers){
     //   extractedPage.push(footers);      
     // }
-    // console.log(extractedPage);
   }
   
   
@@ -42,10 +56,10 @@ class Extractor{
     lines = lines.filter(l=>l[0].y > (Extractor.config.margin.top * diag));
     var headers = {
       type: "HEADER",
-      headers: []
+      value: []
     }
     for(var l of headersChars){
-      headers.headers.push(Extractor._detectMultipleAlignment(l));
+      headers.value.push(Extractor._detectMultipleAlignment(l));
     }
     return headers;
   }
@@ -53,216 +67,7 @@ class Extractor{
   static async generateSegments(page){
     return await page.getLines();
   }
-  
-  static detectHRandTables(lines){
-    var verticals = Extractor.segments.filter(s=>((s.x2 - s.x1) <= 5 && (s.x2 - s.x1) >= -5));
-    var horizontals = Extractor.segments.filter(s=>((s.y2 - s.y1) <= 5 && (s.y2 - s.y1) >= -5));
-    // console.log(verticals.map(v=>v.get({plain: true})));
-    // console.log(Extractor.segments.map(v=>v.get({plain: true})));
-    var tol = (a,b,t)=>{
-      return (a-b) <= t && (a-b) >= -t
-    }
-    
-    
-    var columns = {};
-    var tolerance = 2;
-    
-    // Normalize the x and y values, looking at tolerances since lines may not be completly vertical or horizontal
-    // Also create columns from data
-    // go through all vertical lines since they should be columns
-    for(var i = 0; i < verticals.length; i++){
-      //  if x1 and x2 are within tolerance we set them to be them both to be the minimum value
-      //  This ensures we always assign to smaller value to keep values uniform along comparison
-      if(tol(verticals[i].x1, verticals[i].x2, tolerance)){
-        if(verticals[i].x1 < verticals[i].x2){
-          verticals[i].x2 = verticals[i].x1;
-        }else{
-          verticals[i].x1 = verticals[i].x2;
-        }
-      }
-      //  if y1 and y2 are within tolerance we set them to be them both to be the minimum value
-      //  This ensures we always assign to smaller value to keep values uniform along comparison
-      if(tol(verticals[i].y1 , verticals[i].y2, tolerance)){
-        if(verticals[i].y1 < verticals[i].y2){
-          verticals[i].y2 = verticals[i].y1;
-        }else{
-          verticals[i].y1 = verticals[i].y2;
-        }
-      }
-      // Swap coordinates if y1 is larger than y2, this ensures y2 is always larger, makes detecting grid easier later
-      if(verticals[i].y1 > verticals[i].y2 ){
-        // temporary values
-        var tx = verticals[i].x1;
-        var ty = verticals[i].y1;
-        // perform swap
-        verticals[i].x1 = verticals[i].x2;
-        verticals[i].y1 = verticals[i].y2;
-        verticals[i].x2 = tx;
-        verticals[i].y2 = ty;
-      }
-      // check if theres a column already and add one if there isnt
-      if(!columns[verticals[i].x1]){
-        columns[verticals[i].x1] = []
-      }
-      // add line to the column
-      columns[verticals[i].x1].push(verticals[i]);
-    }
-    
-    // Create the potential rows
-    var rows = {};
-    for(var i = 0; i < horizontals.length; i++){
-      //  if x1 and x2 are within tolerance we set them to be them both to be the minimum value
-      //  This ensures we always assign to smaller value to keep values uniform along comparison
-      if(tol(horizontals[i].x1, horizontals[i].x2, tolerance)){
-        if(horizontals[i].x1 < horizontals[i].x2){
-          horizontals[i].x2 = horizontals[i].x1;
-        }else{
-          horizontals[i].x1 = horizontals[i].x2;
-        }
-      }
-      //  if y1 and y2 are within tolerance we set them to be them both to be the minimum value
-      //  This ensures we always assign to smaller value to keep values uniform along comparison
-      if(tol(horizontals[i].y1 , horizontals[i].y2, tolerance)){
-        if(horizontals[i].y1 < horizontals[i].y2){
-          horizontals[i].y2 = horizontals[i].y1;
-        }else{
-          horizontals[i].y1 = horizontals[i].y2;
-        }
-      }
-      // make sure x2 is always largest
-      if(horizontals[i].x1 < horizontals[i].x2 ){
-        var tx = horizontals[i].x1;
-        var ty = horizontals[i].y1;
-        horizontals[i].x1 = horizontals[i].x2;
-        horizontals[i].y1 = horizontals[i].y2;
-        horizontals[i].x2 = tx;
-        horizontals[i].y2 = ty;
-      }
-      // add row if doesnt exist
-      if(!rows[horizontals[i].y1]){
-        rows[horizontals[i].y1] = []
-      }
-      // add line to row
-      rows[horizontals[i].y1].push(horizontals[i]);
-    }
-    
-    //Find unique grids
-    var grids = [];
-    
-    // get keys of the columns corresponding to x position
-    var keys = Object.keys(columns).sort((a,b)=>(Number(a)-Number(b)));
-
-    
-    for(var i = 0 ; i < keys.length; i++){
-      // work with a column at a time
-      var column = columns[keys[i]];
-      // sort it by y position ascending
-      column.sort((a,b)=>a.y1 - b.y1);
       
-      // min and max y position of a grid, also used to see if separation from grid to signal new grid
-      var maxy = column[0].y2;
-      var miny = column[0].y1;
-      // Go through all columns, if multiple grids on page its likely the grids start on different x positions, therefore check all columns
-      for(var j = 0; j < column.length-1; j++){
-        // check if consecutive line
-        if(column[j+1].y1 <= maxy){
-          //update if starts smaller than miny
-          if(column[j+1].y1 < miny){
-            miny = column[j+1].y1;
-          }
-          //update maxy if larger
-          if(column[j+1].y2 > maxy){
-            maxy = column[j+1].y2; 
-          }
-        }else{
-          //Need to check here for dup
-          var found = grids.find(g=>tol(g.miny,miny,2) && tol(g.maxy,maxy,2))
-          if(found == null){
-            // No duplicate add grid and first x position
-            grids.push({
-              miny: miny,
-              maxy: maxy,
-              columns:[Number(keys[i])],  // x position
-              rows:[]
-            })
-          }else{
-            // found add next column x position
-            found.columns.push(Number(keys[i]))
-          }
-          // Setup min and max for next grid
-          miny = column[j+1].y1;
-          maxy = column[j+1].y2;
-        }
-      }
-      // no change in grid on single column, means its a single column in a grid, find grid or create one
-      var found = grids.find(g=>tol(g.miny,miny,2) && tol(g.maxy,maxy,2))
-      if(found == null){
-        // create new grid amd add first column to x
-        grids.push({
-          miny: miny,
-          maxy: maxy,
-          columns:[Number(keys[i])], // x position
-          rows:[]
-        })
-      }else{
-        // add more columns by getting their x position
-        found.columns.push(Number(keys[i]))
-      }
-      
-    }
-    // console.log("GRIDS");
-    // console.log(grids);
-    
-    // get keys of the rows corresponding to x position
-    var keys = Object.keys(rows).sort((a,b)=>(Number(a)-Number(b)));
-    
-    var HRs = [];
-    
-    // Add rows to grid and find Horizontal Rules(HRs)
-    for( var i = 0; i < keys.length; i++){
-      var y = Number(keys[i]);
-      var grid = grids.find(g=>miny <= y && maxy  >= y); 
-      if(grid){
-        // check if its a border
-        if(!tol(grid.miny,y,tolerance) && !tol(grid.maxy,y,tolerance)){
-          // add to grid
-          grid.rows.push(y);
-        }
-      }else{
-        // its an HR
-        HRs.push(y);
-      }
-    }
-    console.log("GRIDS");
-    // console.log(grids);
-    // console.log("HRS");
-    // console.log(HRs);
-    
-    //Get TEXT from tables
-    
-    for(var i = 0; i < grids.length; i++){
-      var grid =  grids[i];
-      var rows = lines.filter(l=>l[0].y >= grid.miny && l[0].y <= grid.maxy)
-      lines = lines.filter(l=>l[0].y < grid.miny && l[0].y > grid.maxy);
-      grid.cells = [];
-      for(var j = 0; j < rows.length; j++){
-        grid.cells.push([]);
-        // CHECK IMAGES HERE TOO!  TODO
-        for(var k = 1; k < grid.columns.length; k++){
-          grid.cells[j].push(rows[j].filter(c=> c.x >= grid.columns[k-1] && c.x <= grid.columns[k]).map(c=>c.value).join(""));
-        }
-      }
-      // console.log(text.map(l=>l.map(c=>c.value).join("")).join("\n"));
-    }
-    console.log("GRIDS");
-    console.log(grids[0].cells);
-    
-    return{
-      tables: grids,
-      HRs: HRs
-    }
-  }
-  
   
   static getFooters(page, lines){
     var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
@@ -272,10 +77,10 @@ class Extractor{
 
     var headers = {
       type: "FOOTER",
-      headers: []
+      value: []
     }
     for(var l of footerChars){
-      headers.headers.push(Extractor._detectMultipleAlignment(l));
+      headers.value.push(Extractor._detectMultipleAlignment(l));
     }
     return headers;
   }
@@ -323,7 +128,7 @@ class Extractor{
   static detectLargeSpaces(content){
     var largeSpaces = [];
     for(var i=1; i < content.length; i++){
-      if(Math.trunc(content[i].y) == Math.trunc(content[i-1].y) && content[i].font == content[i-1].font && Extractor.analysis.spaces[content[i].font] < (content[i].x - content[i-1].x) ){
+      if(Math.trunc(content[i].y) == Math.trunc(content[i-1].y) && content[i].font == content[i-1].font && Extractor.analysis.spaces[content[i].font].width < (content[i].x - content[i-1].x) ){
         //console.log("big space here: "+content[i].value+", "+content[i-1].value);
         largeSpaces.push({
           before: content[i-1],
@@ -336,3 +141,128 @@ class Extractor{
 }
 
 module.exports = Extractor;
+
+
+class Table {
+  //Remove Blank Rows and Columns
+  static cleanTable(table) {
+    var newTable = [];
+    newTable.push(table[0]);
+    for (var i = 1; i < table.length; i++) {
+      if (!Table.emptyRow(table[i])) {
+        newTable.push(table[i]);
+      }
+    }
+    return Table.trimColumns(newTable);
+  }
+  //Check if empty Row
+  static emptyRow(row) {
+    for (var i = 0; i < row.length; i++) {
+      if (row[i] !== null) {
+        return false;
+      }
+    }
+    return true;
+  }
+  //Remove empty Columns
+  static trimColumns(table) {
+    var rowBitmap = [];
+    if (table.length == 0) {
+      return table;
+    }
+    //Generate initial bitmap based on first row
+    for (var i = 0; i < table[0].length; i++) {
+      table[0][i] !== null ? rowBitmap[i] = 1 : rowBitmap[i] = 0
+    }
+    // increment bitmap if a column exist
+    for (var i = 1; i < table.length; i++) {
+      for (var j = 0; j < table[i].length; j++) {
+        table[i][j] !== null ? rowBitmap[j]++ : {}
+      }
+    }
+    //Create a new Table
+    var newTable = [];
+    for (var i = 0; i < table.length; i++) {
+      var newRow = [];
+      for (var j = 0; j < rowBitmap.length; j++) {
+        rowBitmap[j] > 0 ? newRow.push(table[i][j] === null ? "" : table[i][j]) : {}
+      }
+      newTable.push(newRow);
+    }
+    return newTable;
+  }
+
+
+  //Creates Title Row
+  static createTitles(row, rowBitmap) {
+    var title = '';
+    if(row.length > 0){
+      title+='|';
+    }
+    for (var i = 0; i < row.length; i++) {
+      title += '  ' + Table.createCell(row[i], rowBitmap[i], ' ') + '  |';
+    }
+    title += '\n';
+    return title;
+  }
+
+  //Create a Cell with appropriate padding
+  static createCell(str, maxWidth, spacer) {
+    var width = maxWidth - str.length;
+
+    for (var i = 0; i < width; i++) {
+      str += spacer;
+    }
+    return str;
+  }
+  //Find max padding needed for a column
+  static getMaxWidth(table) {
+    var rowBitmap = [];
+    //Generate initial bitmap based on first row
+    for (var i = 0; i < table[0].length; i++) {
+      rowBitmap[i] = (table[0][i].length > 3 ? table[0][i].length : 3);
+    }
+    // find max width for next columns column
+    for (var i = 1; i < table.length; i++) {
+      for (var j = 0; j < table[i].length; j++) {
+        table[i][j].length > rowBitmap[j] ? rowBitmap[j] = table[i][j].length : {}
+      }
+    }
+    return rowBitmap;
+  }
+
+
+  //Creates Centering Row
+  static createCentering(rowBitmap) {
+    var centering = '';
+    if(rowBitmap.length > 1){
+      centering+='|';
+    }
+    for (var i = 0; i < rowBitmap.length; i++) {
+      centering += '--' + Table.createCell('', rowBitmap[i], '-') + '--|';
+    }
+    centering += '\n';
+    return centering;
+  }
+
+  //Creates Table Body TODO: wrap text at max width
+  static createTable(rows, rowBitmap) {
+    var table = '';
+    table = table + Table.createTitles(rows[0], rowBitmap);
+    table = table + Table.createCentering(rowBitmap);
+    if (rows.length > 1) {
+      table += '|';
+      //Go through each row and column an create the rest of the cells
+      for (var i = 1; i < rows.length; i++) {
+        for (var j = 0; j < rows[i].length; j++) {
+          table += '  ' + Table.createCell(rows[i][j], rowBitmap[j], ' ') + '  |';
+
+        }
+        if (i + 1 < rows.length) {
+          table += '\n|';
+        }
+      }
+    }
+    return table;
+  }
+}

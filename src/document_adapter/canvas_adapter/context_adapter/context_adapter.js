@@ -73,12 +73,13 @@ class ContextAdapter {
   }
   fillRect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("fillRect("+args+")");
+    // console.error("fillRect("+args+")");
   }
   
   fill() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    console.log("fill("+args+")");
+    // console.log("fill("+args+")");
+    this.stroke();
   }
   
   clip() {
@@ -154,7 +155,7 @@ class ContextAdapter {
       
       
       if(tempContext.toDataURL("image/png") == img || this.isTransparent(img,width,height) ){        
-        console.log("blank!!");
+        // console.log("blank!!");
       }else{
         this.jsCanvas.addImage(img, x, y, width, height);  
       }
@@ -175,7 +176,7 @@ class ContextAdapter {
         return false;
       }
     }
-    console.log("transparent");
+    // console.log("transparent");
     return true;
   }
   createImageData(sw, sh) {
@@ -216,7 +217,7 @@ class ContextAdapter {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
-      
+    // console.log("moveTo("+args+")");
     var subpath = {
       path: [
         {
@@ -225,6 +226,9 @@ class ContextAdapter {
       ], 
       open: true
     };
+    if(!this.path){
+      this.path = [];
+    }
     this.path.push(subpath);
   }
   beginPath() {
@@ -240,6 +244,7 @@ class ContextAdapter {
       subpath = this.path.find(p=>p.open);
     }
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    // console.log("lineTo("+args+")");
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
       
@@ -249,7 +254,10 @@ class ContextAdapter {
     };
     subpath.path.push(line);
   }
-  
+  strokeText(){
+    var args = Array.prototype.slice.call(arguments, 0).join(',');
+    console.log("strokeText("+args+")");
+  }
   stroke() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("stroke\n\n");
@@ -257,18 +265,15 @@ class ContextAdapter {
       var r=0;
       var g=0;
       var b=0;   
-      if(this.globalAlpha == 1){
+      var matches = this.strokeStyle.match(rgb);
+      if(!matches || matches.length != 4){
         r = parseInt(this.strokeStyle.substr(1,2),16);
         g = parseInt(this.strokeStyle.substr(3,2),16);
         b = parseInt(this.strokeStyle.substr(5,2),16);
       }else{
-        var matches = this.strokeStyle.match(rgb);
-        
-        if(matches.length==4){
-          r = matches[1];
-          g = matches[2];
-          b = matches[3];
-        }
+        r = matches[1];
+        g = matches[2];
+        b = matches[3];
       }      
       if(r !== "255" || g !== "255" || b !== "255"){      
         this.jsCanvas.addLine(this.path,{
@@ -283,7 +288,7 @@ class ContextAdapter {
   }
   rect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    console.log("rect("+args+")");
+    // console.log("rect("+args+")");
   }
   getJSONCanvas() {
     return this.JSCanvas;

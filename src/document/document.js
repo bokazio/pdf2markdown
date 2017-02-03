@@ -6,6 +6,7 @@ var Page = require('./page/page.js');
 var Logger = require('../logger/logger.js');
 var JSCanvas = require('../document_adapter/canvas_adapter/js_canvas/js_canvas.js');
 global.Image =  require('canvas').Image;
+global.DOMParser = require('xmldom').DOMParser;
 var Markdown = require('../markdown/markdown.js');
 
 
