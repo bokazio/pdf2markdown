@@ -158,7 +158,26 @@ class TableExtractor{
       TableExtractor._addSingleColumn(grids,miny,maxy,x);
       
     }
+    
+    grids = TableExtractor._mergeGrids(grids);
+    
     return grids;
+  }
+  
+  static _mergeGrids(grids){
+    var mGrids = [];
+    for( var i = 0; i < grids.length; i++){
+      var found = grids.find(g=>g.maxy >= grids[i].maxy && g.miny <= grids[i].miny && !(grids[i].maxy == g.maxy && grids[i].miny == g.miny) )
+      if( found){
+        if(!found.variableColumn){
+          found.variableColumn = []
+        }
+        found.variableColumn.push(grids[i]);
+      }else{
+        mGrids.push(grids[i]);
+      }
+    }
+    return mGrids;
   }
   
   /**

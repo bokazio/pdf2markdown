@@ -90,7 +90,6 @@ class Analyzer{
   /* style | variant | size | family | type */
   static _getFont(font){
     var splt = font.split(' ');
-    console.log(splt);
     return {
       style: splt[0],
       variant:splt[1],
