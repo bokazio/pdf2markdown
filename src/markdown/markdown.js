@@ -14,7 +14,7 @@ class Markdown{
     // var pg = 50;
     // // var hInch = 72 * 1.5;
     // await this.measureSpace();
-    for(var i = 3; i<4; i++){
+    for(var i = 1; i<27; i++){
       
       this.document.push(await Extractor.run(i,this.analysis,this.config));
       // console.log("\n\nPage "+i );

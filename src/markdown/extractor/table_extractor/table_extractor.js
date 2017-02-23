@@ -25,14 +25,15 @@ class TableExtractor{
     TableExtractor._extractAllRows(grids,rows,extra);
     
     // Extract the content
-    TableExtractor._extractAllContent(grids,contentLines);
+    contentLines = TableExtractor._extractAllContent(grids,contentLines);
     
     var filtered = TableExtractor._filterHRs(extra,config,page);    
     // return tables and HRs
     return{
       tables: grids.sort((a,b)=>a.miny-b.miny),
       HRs: filtered.HRs,
-      extraLines: filtered.extraLines
+      extraLines: filtered.extraLines,
+      lines: contentLines
     }
   }
   
@@ -328,8 +329,9 @@ class TableExtractor{
       // Current grid
       var grid =  TableExtractor._pruneGrid(grids[i]);
       // Prune values:
-      TableExtractor._extractContent(grid,lines);
+      lines = TableExtractor._extractContent(grid,lines);
     }
+    return lines;
   }
   
   /**
@@ -364,7 +366,7 @@ class TableExtractor{
       // go through each row and separate by column
       TableExtractor._extractRowContents(grid,row,grid.contents[i])
     }
-    return grid;
+    return lines;
   }
   /**
    * Extract each rows content and put it in grid

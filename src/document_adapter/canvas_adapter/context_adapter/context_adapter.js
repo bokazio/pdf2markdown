@@ -1,6 +1,7 @@
 var math = require('mathjs');
 var fs = require('fs');
 var rgb = /rgb\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/;
+var size = /(\d*\.{0,1}\d*)px\s/;
 var Canvas = require('canvas');
 var Image = require('canvas').Image;
 class ContextAdapter {
@@ -14,16 +15,20 @@ class ContextAdapter {
     this.strokeStyle = "#000000";
     this.fillStyle = "#000000";
     this.globalAlpha = 1;
+    this._font = "10px sans-serif";
+    this.font = "10px sans-serif";
   }
   save() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("save("+args+")");
     this.transformStack.push(this.transformMatrix);
+    this.nodeContext.save.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   restore() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("restore("+args+")");
     this.transformMatrix = this.transformStack.pop();
+    this.nodeContext.restore.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   scale(x, y) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
@@ -34,10 +39,12 @@ class ContextAdapter {
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
+    this.nodeContext.scale.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("transformMatrix: "+ this.transformMatrix);
   }
   rotate(angle) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.rotate.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("rotate("+args+")");
   }
   translate(x, y) {
@@ -49,6 +56,7 @@ class ContextAdapter {
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
+    this.nodeContext.translate.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("transformMatrix: "+ this.transformMatrix);
   }
   transform(a, b, c, d, e, f) {
@@ -61,49 +69,94 @@ class ContextAdapter {
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
+    this.nodeContext.transform.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("transformMatrix: "+ this.transformMatrix);
   }
   setTransform(a, b, c, d, e, f) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.transformMatrix = math.matrix([
+      [a, c, e],
+      [b, d, f],
+      [0, 0, 1]
+    ]);
     // console.log("setTransform("+args+")");
+    this.nodeContext.setTransform.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   clearRect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.clearRect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("clearRect("+args+")");
   }
   fillRect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.fillRect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.error("fillRect("+args+")");
   }
   
   fill() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("fill("+args+")");
+    this.nodeContext.fill.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     this.stroke();
   }
   
   clip() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.clip.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("clip("+args+")");
   }
   fillText(text, x, y, maxWidth) {
+    
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("fillText("+args+")");
     var vector = math.matrix([x, y, 1]);
+    // console.log(this.transformMatrix);
     var nw = math.multiply(this.transformMatrix, vector);
-    // console.log("actual coord: "+ nw);
-    this.jsCanvas.addCharacter(text, nw.subset(math.index(0)), nw.subset(math.index(1)), this.font,this.lineWidth);
+    
+    
+    var d = this.transformMatrix.subset(math.index(1,1));
+    var a = this.transformMatrix.subset(math.index(0,0));
+    
+    
+    var height = d*Number(this.font.match(size)[1]);
+    
+    var temp = this.font;
+    
+    this.font = this.font.replace(size, ' '+Math.ceil(height)+"px ");
+    
+    
+    var mTextMetrics = this.measureText("M");
+    var spaceTextMetrics = this.measureText(" ");
+    // var tabTextMetrics = this.measureText("\t");
+    
+    this.font = temp;
+    var f = {
+      name: this.font.replace(size, ' '+Math.ceil(height)+"px "),
+      // mWidth: mTextMetrics.width,
+      spaceWidth: a,
+      // tabWidth: tabTextMetrics.width,
+      height: Math.ceil(height),
+    }
+    
+    
+    if(this.jsCanvas){
+      this.jsCanvas.addCharacter(text, nw.subset(math.index(0)), nw.subset(math.index(1)), f);
+    }
+    var ret = this.nodeContext.fillText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log(this.jsCanvas);
+    return ret;
   }
   measureText(text) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("measureText("+args+")");
+    this.nodeContext.font = this.font;
     var ret = this.nodeContext.measureText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
 
     return ret;
   }
   bezierCurveTo() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.bezierCurveTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("bezierCurveTo("+args+")");
   }
   async drawImage(image) {
@@ -154,11 +207,11 @@ class ContextAdapter {
       var img = image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png");
       
       
-      if(tempContext.toDataURL("image/png") == img || this.isTransparent(img,width,height) ){        
-        // console.log("blank!!");
-      }else{
+      // if(tempContext.toDataURL("image/png") == img || this.isTransparent(img,width,height) ){        
+      //   // console.log("blank!!");
+      // }else{
         this.jsCanvas.addImage(img, x, y, width, height);  
-      }
+      // }
       
     }
     return ret;
@@ -189,6 +242,8 @@ class ContextAdapter {
   }
   getImageData(sx, sy, sw, sh) {
     var args = Array.prototype.slice.call(arguments, 1).join(',');
+    var ret = this.nodeContext.getImageData.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
+    return ret;
     // console.log("getImageData("+args+")");
   }
   putImageData(imageData, x, y) {
@@ -212,6 +267,7 @@ class ContextAdapter {
     if(subpath){
       subpath.open = false;
     }
+    this.nodeContext.closePath.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   moveTo(x, y) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
@@ -230,12 +286,13 @@ class ContextAdapter {
       this.path = [];
     }
     this.path.push(subpath);
+    this.nodeContext.moveTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   beginPath() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     // console.log("beginPath("+args+")");
     this.path = [];
-
+    this.nodeContext.beginPath.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   lineTo(x, y) {
     var subpath = this.path.find(p=>p.open);
@@ -253,10 +310,12 @@ class ContextAdapter {
       y: nw.subset(math.index(1))
     };
     subpath.path.push(line);
+    this.nodeContext.lineTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   strokeText(){
     var args = Array.prototype.slice.call(arguments, 0).join(',');
     console.log("strokeText("+args+")");
+    this.nodeContext.strokeText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   stroke() {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
@@ -285,9 +344,11 @@ class ContextAdapter {
         });
       }
     }
+    this.nodeContext.stroke.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   rect(x, y, w, h) {
     var args = Array.prototype.slice.call(arguments, 0).join(',');
+    this.nodeContext.rect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     // console.log("rect("+args+")");
   }
   getJSONCanvas() {

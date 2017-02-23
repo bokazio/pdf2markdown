@@ -5,11 +5,19 @@ var ContextAdapter = require('./context_adapter/context_adapter.js');
  * Canvas Adapter
  */
 class CanvasAdapter{
-  constructor(){
+  constructor(font){
     this.width = 200;
     this.height = 200;
     this.type = "CanvasAdapter";
+    this.font = font;
+    console.log(this.font);
+    
   }
+  
+  // addFont(fontFamily, file){
+  //   this.nodeCanvas.registerFont
+  // }
+  
   /**
    * Creates a context
    * If jsCanvas is present it will be managed by pdf2markdown
@@ -21,7 +29,8 @@ class CanvasAdapter{
    */
   getContext(type,jsCanvas){
     this.nodeCanvas = new Canvas(this.width,this.height);
-    return new ContextAdapter(this.nodeCanvas,this,jsCanvas);
+    this.canvasAdapter = new ContextAdapter(this.nodeCanvas,this,jsCanvas);
+    return this.canvasAdapter;
   }
 }
 

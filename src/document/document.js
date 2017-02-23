@@ -53,6 +53,8 @@ class Document{
     var c = this._getUtc(new Date(cd.substring(2,6),cd.substring(6,8),cd.substring(8,10),cd.substring(10,12),cd.substring(12,14),cd.substring(14,16),0),cd.substring(16,17),cd.substring(17,19),cd.substring(20,22));
     var u = this._getUtc(new Date(ud.substring(2,6),ud.substring(6,8),ud.substring(8,10),ud.substring(10,12),ud.substring(12,14),ud.substring(14,16),0),ud.substring(16,17),ud.substring(17,19),ud.substring(20,22));
 
+    //console.log(JSON.stringify(await this._pdf.getOutline()));
+
     this._doc = await DB.Document.create({
       numberPages: Number(this._pdf.numPages),
       pdfVersion: metadata.info.PDFFormatVersion,
@@ -82,6 +84,7 @@ class Document{
         await JSCanvas.done();    
       }
     }    
+    await JSCanvas.finish();
   }
   /**
    * Get the UTC time from date, TODO: Buggy

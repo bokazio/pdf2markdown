@@ -44,14 +44,25 @@ class Page{
   static async _loadAnnotations(pdfjsPage, pageId){
     var annotations = await pdfjsPage.getAnnotations();
     var an = [];
+    
+    var view = pdfjsPage.view;
+    
+    
+    
     for(var a of annotations){
+      
+      var rect = PDFJS.Util.normalizeRect([
+                      a.rect[0],
+                      view[3] - a.rect[1] + view[1],
+                      a.rect[2],
+                      view[3] - a.rect[3] + view[1]]);
       an.push({
-        x1: a.rect[0],
-        y1: a.rect[1],
-        x2: a.rect[2],
-        y2: a.rect[3],
+        x1: rect[0],
+        y1: rect[1],
+        x2: rect[2],
+        y2: rect[3],
         type: a.subtype,
-        value: JSON.stringify(a.dest),
+        value: a.url ? a.url : JSON.stringify(a.dest),
         pageId: pageId   
       });
     }

@@ -38,6 +38,7 @@ class DB {
   _models(){
     this.Document = this.db.define("document",require('./models/document.js'));
     this.Page = this.db.define("page",require('./models/page.js'));
+    this.Font = this.db.define("font", require('./models/font.js'));
     this.Character = this.db.define("character",require('./models/character.js'));
     this.Line = this.db.define("line", require('./models/line.js'));
     this.Rectangle = this.db.define("rectangle", require('./models/rectangle.js'));
@@ -59,6 +60,14 @@ class DB {
     this.Character.belongsTo(this.Page);
     this.Page.hasMany(this.Character);
     
+    // Character -> Font
+    this.Character.belongsTo(this.Font,{
+      constraints: false
+    });
+    this.Font.hasMany(this.Character,{
+      constraints: false
+    });
+    
     // Page -> Line
     this.Line.belongsTo(this.Page);
     this.Page.hasMany(this.Line);
@@ -68,8 +77,12 @@ class DB {
     this.Page.hasMany(this.Rectangle);
     
     // Page -> Image
-    this.Image.belongsTo(this.Page);
-    this.Page.hasMany(this.Image);
+    this.Image.belongsTo(this.Page,{
+      constraints: false
+    });
+    this.Page.hasMany(this.Image,{
+      constraints: false
+    });
     
     // ImageData -> Image
     this.Image.belongsTo(this.ImageData);
@@ -89,10 +102,22 @@ class DB {
    */
   async load(wipe=true,logging=false){
     //Setup DB
-    this.db = new Sequelize(undefined,undefined,undefined,{
+    // this.db = new Sequelize(undefined,undefined,undefined,{
+    //   logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
+    //   storage: FILE,
+    //   dialect: 'sqlite'
+    // });
+    
+    this.db = new Sequelize('pdfmarkdown','postgres','postgres',{
       logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
-      storage: FILE,
-      dialect: 'sqlite'
+      dialect: 'postgres',
+      host: 'localhost',
+      port: 5433,
+      pool: {
+        max: 5,
+        min: 0,
+        idle: 10000
+      },
     });
     this._models();
     this._associations();
