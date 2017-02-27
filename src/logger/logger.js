@@ -8,7 +8,7 @@ class Logger{
       console.log(this._timestamp() + colors.dim.yellow(txt));
     }
   }
-  static heading(level,txt){
+  static heading(txt){
     console.log(this._timestamp() + colors.reset.underline.cyan(txt));
   }
   static warn(txt){
@@ -20,8 +20,12 @@ class Logger{
   static error(txt){
     console.log(this._timestamp() + colors.reset.bold.red(txt));
   }
-  static list(item){
-    console.log(this._timestamp() + colors.reset.bold.red(txt));
+  static list(items){
+    if(Logger.verbose){
+      for(var i = 0; i < items.length; i++){
+        console.log(this._timestamp() + colors.reset.bold.grey(items[i]));
+      }
+    }
   }
   static deprecated(txt){
     console.log(this._timestamp() + colors.reset.bold.grey(txt));

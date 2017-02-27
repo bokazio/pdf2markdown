@@ -1,11 +1,21 @@
-
+var Logger = require('../../../logger/logger.js')
 // Amount of tolerance to allow for pixel deviation +/- this value
 var tolerance = 2;
 /**
  * Extracts Tables
  */
 class TableExtractor{
+  
+  /**
+   * Run and detect tables, hrs and extra lines
+   * @param  {Array} contentLines  Array of Array of DB.Character objects corresponding to a line on the page
+   * @param  {Array} segments      drawn line segments on the page - DB.Line objects
+   * @param  {Object} config       User provided configuration overrides
+   * @param  {Page} page           Current Page
+   * @return {Object}              {result: {tables, HRs, extralines}, lines:  (filtered contentLines)}
+   */
   static run(contentLines, segments, config, page){
+    Logger.debug("Extracting Tables");
     //Find Vertical Lines
     var verticals = segments.filter(s=>((s.x2 - s.x1) <= 5 && (s.x2 - s.x1) >= -5));
     // Find Horizontal Lines
@@ -27,32 +37,68 @@ class TableExtractor{
     // Extract the content
     contentLines = TableExtractor._extractAllContent(grids,contentLines);
     
-    var filtered = TableExtractor._filterHRs(extra,config,page);    
-    // return tables and HRs
-    return{
-      tables: grids.sort((a,b)=>a.miny-b.miny),
-      HRs: filtered.HRs,
-      extraLines: filtered.extraLines,
+    var filtered = TableExtractor._filterHRs(extra,config,page);  
+    
+    // sort tables
+    grids.sort((a,b)=>a.miny-b.miny)
+    
+    Logger.debug(grids.length+" tables detected");
+    
+    // return tables, HRs and extraLines
+    return {
+      result: {
+        tables: grids,
+        HRs: filtered.HRs,
+        extraLines: filtered.extraLines,
+      },
       lines: contentLines
     }
   }
+  /**
+   * 
+   * Package Tables Up to Renderer interface
+   * @return {[type]} [description]
+   */
+  static _packageTables(tables){
+    return tables.map(t=>{
+      return {
+        type: "TABLE",
+        value: t,
+        y: t.miny
+      }
+    })
+    
+  }
   
-  static _filterHRs(HRs,config,page){
+  /**
+   * Get the HRs from extra lines not in table Extraneous Lines
+   * @param  {Array}  lines  extra lines
+   * @param  {Object} config of document
+   * @param  {Page} page   current page
+   * @return {Object}        HRs and extralines
+   */
+  static _filterHRs(lines,config,page){
     var res = {
       HRs: [],
       extraLines: []
     }
+    // Find half width of page, if line width is greater than half page, its probably an HR.
     var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
-    // console.log(config);
     var halfWidth = (page.width - (config.margin.left * diag) - (config.margin.right * diag)) / 2;
-    // console.log(page.width, halfWidth);
-    for(var i = 0; i < HRs.length; i++){
-      var hWidth = Math.sqrt(Math.pow(HRs[i][0].x2 - HRs[i][0].x1,2) + Math.pow(HRs[i][0].y2 - HRs[i][0].y1,2));
-      // console.log(HRs[i]);
-      if(hWidth >= halfWidth){
-        res.HRs.push(HRs[i][0].y1);
+
+    for(var i = 0; i < lines.length; i++){
+      // distance formula: sqrt( (x2-x1)^2 + (y2-y1)^2) )
+      var lineWidth = Math.sqrt(Math.pow(lines[i][0].x2 - lines[i][0].x1,2) + Math.pow(lines[i][0].y2 - lines[i][0].y1,2));
+      if(lineWidth >= halfWidth){
+        res.HRs.push({
+          type: "HR",
+          y: lines[i][0].y1
+        });
       }else{
-        res.extraLines.push(HRs[i][0].y1);
+        res.extraLines.push({
+          type: "EXTRA_LINE",
+          y: lines[i][0].y1
+        });
       }
     }  
     return res;

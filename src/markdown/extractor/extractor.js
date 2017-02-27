@@ -1,53 +1,55 @@
-var TableExtractor = require('./table_extractor/table_extractor.js');
+const TableExtractor = require('./table_extractor/table_extractor.js');
+const HeaderFooterExtractor = require('./header_footer_extractor/header_footer_extractor.js');
+
 var Logger = require('../../logger/logger.js');
+
+
+/*
+* Renderer interface
+* ```
+* line:{
+*   type: "TABLE",
+*   value: [table data],
+*   y: min y coordinate
+* }
+* ```
+ */
+
 class Extractor{
-  static async run(pageId, analysis, config){
+  static async run(page, analysis, config){
     Extractor.analysis = analysis;
     Extractor.config = config;
-    var page = await DB.Page.findById(pageId);
-    Logger.log("Page "+page.number);
-    var lines = await Extractor.generateLines(page);
-    Extractor.segments = await Extractor.generateSegments(page);
-    
-    Extractor.createSpaces(lines);
-    await Extractor.detectLinks(page,lines);
-    await Extractor.detectImages(page,lines);
-    
-    // Extractor.detectHeading(lines);
-    // Extractor.extractInlineElements(lines);
     
     
-    // console.log(Extractor.segments.map(e=>e.get({plain: true})))
-    var detection = TableExtractor.run(lines, Extractor.segments, config,page);
-    // console.log(detection);
-    // for(var i = 0; i < detection.tables.length; i++){
-    //   if(detection.tables[i].contents.length > 0){
-    //     console.log("\n"+Table.createTable(detection.tables[i].contents, Table.getMaxWidth(detection.tables[i].contents))); 
-    //     console.log(detection.tables[i]); 
-    //   }
-    //   console.log("\n\n EXTRA: ");
-    //   console.log(detection.extraLines);
-    //   console.log("\n\n HRs: ");
-    //   console.log(detection.HRs);
-    //   console.log("\n");     
-    // }
+    // Setup
+    Extractor.lines = await Extractor.generateLines(page);
+    Extractor.lines = Extractor.createSpaces(Extractor.lines);
+    Extractor.segments = await Extractor.generateSegments(page);    
     
-    // console.log(Extractor.extractList(lines,page));
-    // 
-    // 
-    // 
-    lines = detection.lines;
-    var headers =  Extractor.getHeaders(page,lines);
-    var footers = Extractor.getFooters(page,lines);
     
-    var headings = Extractor.detectHeading(lines);
-    var content = await Extractor.detectFontStyle(lines);
+    // replace 
+    await Extractor.detectLinks(page,Extractor.lines);
+    await Extractor.detectImages(page,Extractor.lines);
+    
+    
+    var headerFooterResult =  HeaderFooterExtractor.run(page, Extractor.lines, Extractor.config, Extractor.analysis);
+    Extractor.lines = headerFooterResult.lines;
+
+    var detection = TableExtractor.run(Extractor.lines, Extractor.segments, config,page);
+
+    Extractor.lines = detection.lines;
+
+    
+    
+    var headings = Extractor.detectHeading(Extractor.lines);
+    var content = await Extractor.detectFontStyle(Extractor.lines);
     
     var list = Extractor.extractList(content,page);
     // for(var i = 0; i < content.length; i++){
     //   content[i] = Extractor.detectListType(content[i],page);
     // }
-    content = content.concat(headings).concat(detection.tables);
+    // content = ListExtractor.run()
+    content = content.concat(headings).concat(detection.result.tables);
     content.sort((c1,c2)=>{
       var y1 = c1.miny ? c1.miny : c1.y;
       y1 = y1 ? y1 : c1[0].y;
@@ -56,6 +58,7 @@ class Extractor{
       return y1 - y2;
     })
     
+    // TODO: Refactor into Renderer
     var printContent = (con)=>{
       var gen = "";
       for(var i = 0; i < con.length; i++){
@@ -83,7 +86,10 @@ class Extractor{
             if(nw){
               gen+="\n\n";
             }else{
-              gen+="<br/>";
+              if(line[0].value == " " && line.length == 1){
+                gen+="\n\n";
+                
+              }
             }
           // }
           
@@ -109,19 +115,19 @@ class Extractor{
       }
       return gen;
     }
-    var fs = require('fs');
-    var append = true;
-    if(append){
-      fs.appendFileSync("test/fannie.md","\n\nPage "+page.number+"\n---\n\n"+printContent(content));
-    }else{
-      fs.writeFileSync("test/fannie_"+page.number+".md",printContent(content));
-    }
-    
-    var extractedPage = {
-      headers: headers,
-      footers: footers,
-      // content: content
-    };
+    // var fs = require('fs');
+    // var append = true;
+    // if(append){
+    //   fs.appendFileSync("test/fannie.md","\n\nPage "+page.number+"\n---\n\n"+printContent(content));
+    // }else{
+    //   fs.writeFileSync("test/fannie_"+page.number+".md",printContent(content));
+    // }
+    return printContent(content);
+    // var extractedPage = {
+    //   headers: headers,
+    //   footers: footers,
+    //   // content: content
+    // };
     
     
     
@@ -140,6 +146,10 @@ class Extractor{
     // console.log(extractedPage);
   }
   
+  static async generateSegments(page){
+    return page.getLines();
+  }
+   
   static extractList(lines,page){
     var lists = [];
     for(var i = 0; i < lines.length; i++){
@@ -163,6 +173,7 @@ class Extractor{
     for(var i = 0; i < lines.length; i++){
       Extractor.addSpaces(lines[i]);
     }
+    return lines;
   }
   
   static addSpaces(line){
@@ -203,9 +214,11 @@ class Extractor{
 
       if(line){
         var text = line.filter(l=> (l.x >= an.x1 && l.x <= an.x2) || (l.x >= an.x2 && l.x <= an.x1));
+        //TODO: relative link to headings
         if(text && text.length > 0){
           text[0].value = "["+text[0].value;
-          text[text.length-1].value = text[text.length-1].value + "]("+an.value+")";
+          text[text.length-1].value = text[text.length-1].value + "]("+'relative'+")";
+          
         }else{
           var link = {
             value: "["+an.value+"]("+an.value+")",
@@ -324,7 +337,7 @@ class Extractor{
   
   
   static detectListType(line,page){
-    var ul = ['\u25A0','-','*','+'];
+    var ul = ['\u25A0','-','*','+','•'];
     var ol = /(^\s*(\d+|\w)\s*\.*\s+)|(^\s*\(\s*(\d?|\w+)\s*\)\s+)/;
     var char = line[0];
     line = line.map(l=>l.value).join('');
@@ -399,41 +412,7 @@ class Extractor{
   }
   
   
-  // TODO 
-  static getHeaders(page, lines){
-    var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
-    var headersChars = lines.filter(l=>l[0].y <= (Extractor.config.margin.top * diag))
-    lines = lines.filter(l=>l[0].y > (Extractor.config.margin.top * diag));
-    var headers = {
-      type: "HEADER",
-      value: []
-    }
-    for(var l of headersChars){
-      headers.value.push(Extractor._detectMultipleAlignment(l));
-    }
-    return headers;
-  }
   
-  static async generateSegments(page){
-    return await page.getLines();
-  }
-      
-  
-  static getFooters(page, lines){
-    var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
-
-    var footerChars = lines.filter(l=>l[0].y >= (page.height - Extractor.config.margin.bottom * diag))
-    lines = lines.filter(l=>l[0].y < (page.height - Extractor.config.margin.bottom * diag));
-
-    var headers = {
-      type: "FOOTER",
-      value: []
-    }
-    for(var l of footerChars){
-      headers.value.push(Extractor._detectMultipleAlignment(l));
-    }
-    return headers;
-  }
   static async generateLines(page){
     var characters = await page.getCharacters({
       order:" y ASC, x ASC"
@@ -452,41 +431,6 @@ class Extractor{
       lines[current].push(content[i]);
     }
     return lines;
-  }
-  static _detectMultipleAlignment(content){   
-    var separations = Extractor.detectLargeSpaces(content);
-    var alignments={};
-    var current = 'left';
-    alignments[current]=[];
-     for(var i = 0; i< content.length; i++){
-       if(!separations.find(f=>f.after.id==content[i].id)){
-         alignments[current].push(content[i]);
-       }else{
-         if(separations.length == 1 || current == "center"){
-           current = "right";
-         }else{
-           current = "center";
-         }
-         alignments[current]=[];
-         alignments[current].push(content[i]);
-       }
-     }
-    
-     
-    return alignments;
-  }
-  static detectLargeSpaces(content){
-    var largeSpaces = [];
-    for(var i=1; i < content.length; i++){
-      if(Math.trunc(content[i].y) == Math.trunc(content[i-1].y) && content[i].fontName == content[i-1].fontName && Extractor.analysis.spaces[content[i].fontName].space < (content[i].x - content[i-1].x) ){
-        //console.log("big space here: "+content[i].value+", "+content[i-1].value);
-        largeSpaces.push({
-          before: content[i-1],
-          after: content[i]
-        })
-      }
-    }
-    return largeSpaces;
   }
 }
 

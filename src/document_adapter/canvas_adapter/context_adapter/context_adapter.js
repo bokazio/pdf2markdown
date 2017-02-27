@@ -314,7 +314,7 @@ class ContextAdapter {
   }
   strokeText(){
     var args = Array.prototype.slice.call(arguments, 0).join(',');
-    console.log("strokeText("+args+")");
+    // console.log("strokeText("+args+")");
     this.nodeContext.strokeText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   stroke() {

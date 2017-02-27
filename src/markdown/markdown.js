@@ -1,206 +1,204 @@
 var Sequelize = require('sequelize');
 var Analyzer = require('./analyzer/analyzer.js');
 var Extractor = require('./extractor/extractor.js');
+var Logger = require('../logger/logger.js');
 class Markdown{
   constructor(config,stream){
     this._readConfig(config);
     this.spaces = {};
-    this.document = [];
+    this.document = "";
   }
-  async convert(){
+  async convert(doc){
+    this.analysis = await Analyzer.run(doc.id,this.config);
+    var doc = await DB.Document.findOne();
+    var pages = await doc.getPages();
+    var fs = require('fs');
+    fs.writeFileSync("test/fannie.md","");
     
-    this.analysis = await Analyzer.run(1,this.config);
-    
-    // var pg = 50;
-    // // var hInch = 72 * 1.5;
-    // await this.measureSpace();
-    for(var i = 1; i<27; i++){
-      
-      this.document.push(await Extractor.run(i,this.analysis,this.config));
-      // console.log("\n\nPage "+i );
-      // var page = await DB.Page.findOne({
-      //   where:{
-      //     number: i
-      //   }
-      // });
-      // await this.getCharacters(page);
-      // await this.getImages(page);
-      // await this.getHeadersFooters(page);
+    for(var i = 0; i<pages.length; i++){
+      Logger.info("Extracting page "+(i+1)+"/"+pages.length);
+      this.document += (await Extractor.run(pages[i],this.analysis,this.config));
       
     }
-    
-   
-    
-    // console.log(page.get({plain: true}));
-    
-    // var headers = await DB.Character.findAll({
-      
-    // })
-    
-    
-    // console.log(headers.map(c=>c.value).join(''));
-    
-    // var footers = await DB.Character.findAll({
-    //   where:{
-    //     y:{
-    //       $gte: page.height - 72
-    //     },
-    //     pageId: pg,
-    //   }
-    // })
-    
-    
-    // console.log("footers:\n"+footers.map(c=>c.value).join(''));
+    return this.document;
   } 
   _render(){
     
   } 
-  async getCharacters(page){
-    var characters = await page.getCharacters({
-      order:" y ASC, x ASC"
-    });
-    this.lines = this.getLines(characters);
-  }
-  async getImages(page){
-    this.images = await page.getImages({
-      order:" y ASC, x ASC"
-    });
-  }
-  async getHeadersFooters(page){
-    var diag = Math.sqrt(Math.pow(page.width,2) + Math.pow(page.height,2));
-
-    var headersChars = this.lines.filter(l=>l[0].y <= (this.config.margin.top * diag))
-
-    var footersChars = this.lines.filter(l=>l[0].y >= (page.height - this.config.margin.bottom * diag))
-    
-    var headerImages = this.images.filter(l=>l.y <= (this.config.margin.top * diag));
-    
-    if(headerImages.length > 0){
-      console.log(headerImages.map(i=>i.get({plain:true})));
-      throw "FOUND";
-    }
-    
-    this.headers = [];
-    for(var l of headersChars){
-      this.headers.push(this.detectMultipleAlignment(l));
-      //insert images into headers here if they exist
-    }
-    
-    this.footers = [];
-    for(var l of footersChars){
-      this.footers.push(this.detectMultipleAlignment(l));
-      //insert images into footers here if they exist
-    }
-    
-  }
-  detectAlignment(content){
-   
-  }
-  
-  detectMultipleAlignment(content){   
-    var separations = this.detectLargeSpaces(content);
-    var alignments={};
-    var current = 'left';
-    alignments[current]=[];
-     for(var i = 0; i< content.length; i++){
-       if(!separations.find(f=>f.after.id==content[i].id)){
-         alignments[current].push(content[i]);
-       }else{
-         if(separations.length == 1 || current == "center"){
-           current = "right";
-         }else{
-           current = "center";
-         }
-         alignments[current]=[];
-         alignments[current].push(content[i]);
-       }
-     }
-    
-     // var str = alignments["left"] ? alignments["left"].map(l=>l.value).join('')+"|" : "|";
-     // str += alignments["center"] ? alignments["center"].map(l=>l.value).join('')+"|" : "|";
-     // str += alignments["right"] ? alignments["right"].map(l=>l.value).join('') : "";
-     // console.log( str);
-     
-    return alignments;
-  }
-  getLines(content){
-    var lines = [];
-    var current = 0;
-    lines[current]=[content[0]];
-    for(var i = 1; i< content.length; i++){
-      if(content[i].y != content[i-1].y ){
-        current++;
-        lines[current]=[];
-      }
-      lines[current].push(content[i]);
-    }
-    return lines;
-  }
-  detectLargeSpaces(content){
-    var largeSpaces = [];
-    for(var i=1; i < content.length; i++){
-      if(Math.trunc(content[i].y) == Math.trunc(content[i-1].y) && content[i].font == content[i-1].font && this.spaces[content[i].font] < (content[i].x - content[i-1].x) ){
-        //console.log("big space here: "+content[i].value+", "+content[i-1].value);
-        largeSpaces.push({
-          before: content[i-1],
-          after: content[i]
-        })
-      }
-    }
-    return largeSpaces;
-  }
-  
-  async measureSpace(){
-    var m = await DB.Character.findAll({
-      where:{
-        value: 'M'
-      },
-      attributes: [[Sequelize.literal('DISTINCT font'), 'font']],
-    })    
-    for(var i = 0; i < m.length; i++){
-      var space = await DB.Character.findOne({
-        where:{
-          font: m[i].font,
-          value: 'M'
-        },
-      })
-      var next = await DB.Character.findOne({
-        where:{
-          font: m[i].font,
-          y: space.y,
-          x:{
-            $gt: space.x
-          }
-        },
-        order: 'x ASC'
-      })
-     this.spaces[m[i].font] = next.x - space.x + 1;//add a bit of tolerance
-    }
-   //console.log(this.spaces);
-    
-  }
-  _findOneArray(arr,func){
-    var find = arr.length > 0 ? arr[0] : undefined;
-    func.bind(find);
-    arr.forEach(func);
-    return find;
-  }
   //Currently page dimensions is in inches only, TODO: add other metrics and convert them to inches
   _readConfig(config){
+    this.config = config;
+    
     var diagonal = 13.901438774457844;
-    if(config.dimensions.width && config.dimensions.height){
+    // Dimensions
+    if(config.dimensions && config.dimensions.width && config.dimensions.height){
       diagonal = Math.sqrt(Math.pow(config.dimensions.width,2) + Math.pow(config.dimensions.height,2));
+      this.config.dimensions.width = config.dimensions.width;
+      this.config.dimensions.height = config.dimensions.height;
     }
-    this.config = {
-      dimensions: config.dimensions,
-      //Precomputed value, needs * by page diagonal to get # of pixels for margin
-      margin:{
-        right: (config.margin.right ? config.margin.right : 1) / diagonal,
-        left: (config.margin.left ? config.margin.left : 1)/ diagonal,
-        top: (config.margin.top ? config.margin.top : 1)/ diagonal,
-        bottom: (config.margin.bottom ? config.margin.bottom : 1) / diagonal
-      }
+    // RawMargins in inches
+    if(config.margin){
+      this.config.rawMargin.right = config.margin.right ? config.margin.right : this.config.rawMargin.right;
+      this.config.rawMargin.left = config.margin.left ? config.margin.left : this.config.rawMargin.left;
+      this.config.rawMargin.top = config.margin.top ? config.margin.top : this.config.rawMargin.top;
+      this.config.rawMargin.bottom = config.margin.bottom ? config.margin.bottom : this.config.rawMargin.bottom;
     }
+    //Precomputed margin value, needs * by page diagonal to get # of pixels for margin
+    this.config.margin = {
+      right: this.config.rawMargin.right / diagonal,
+      left: this.config.rawMargin.left / diagonal,
+      top: this.config.rawMargin.top / diagonal,
+      bottom: this.config.rawMargin.bottom / diagonal
+    }
+  }
+  _defaultConfig(){
+    var inchPrecompute = 0.07193500012656064;
+    return {
+      // in inches
+      dimensions: {
+        height: 11,
+        width: 8.5
+      },        
+      // in inches, * user will provide rawMargin as 'margin'
+      // it gets translated to rawMargin and precomputed margin values
+      rawMargin:{
+        right: 1,
+        left: 1,
+        top: 1,
+        bottom: 1
+      },
+      ul:{
+        // tokens that should match upon to trigger as match for beginning of line
+        tokens: ['\u25A0','-','*','+','•'],
+        // UNIMPLEMENTED
+        // Image hashes to detect as list
+        imageHashes: [],
+        // UNIMPLEMENTED, just does first '-'
+        // from left to right the bullet style to use for rendering to markdown as nesting occurs
+        // * wraps around if deeper than 3
+        bulletStyle: ['-','+','*']
+      },
+      ol:{
+        // TODO: needs to be more robust:
+        // Matches on:
+        // (1)  sdfsdfsdf
+        // 1. sdfsdfsdf
+        // a. sdfsdfsdf
+        // (a) sdfsdf
+        // a) sdfsdfsdf
+        // 1) asdfsdf
+        regex: /(^\s*(\d+\s*\.*|\w\s*\.)\s+)|(^\s*\(?\s*(\d?|\w+)\s*\)\s+)/,
+        // UNIMPLEMENTED
+        ignoreList: [],
+        // UNIMPLEMENTED
+        specialList: [],
+      },
+      // TODO: what to do with headers 
+      // headers:{} 
+      // TODO: what to do with footers
+      // footers:{} 
+      font:{
+        bold: [],
+        italic: []
+      },
+      // UNIMPLEMENTED
+      // Version 2 TODO: implement this logic
+      spaceHeuristics:[        
+        {
+          // identifier for conditions
+          id: 'high-tolerance',
+          // what to characters to match
+          chars: "wWMmR:ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+          // lower number means it will detect more things as a space
+          tolerance: 1.6,
+          // Before After either check to trigger tolerance:
+          // 1:  true
+          // 0:  either true or false
+          // -1: false
+          before: 1,
+          after: 0,
+          // Whether to just stop if this heuristic is true
+          shortCircuit: false,
+          // Whether to run heuristic based on result of previous heuristic
+          condition:[{
+            // id of heuristic
+            id: '',
+            // if heuristic resolved to condition we run this heuristic 
+            condition: false,            
+          }],
+          // Exact matches of a set of characters that should have space after
+          match: []
+        },
+      ],
+      // UNIMPLEMENTED, single only
+      spacing: 'single',
+      headings:{
+        h1: {
+          size: 32,
+          // +/- tolerance from size
+          tolerance: 5,
+          // Set font names explicitly for heading
+          // fontNames: []
+        },
+        h2: { 
+          size: 24,
+          tolerance: 2
+        },
+        h3: {
+          size: 20,
+          tolerance: 2
+        },
+        h4: {
+          size: 16,
+          tolerance: 1,
+          // Number up to 100 correspondng to the maximum percent allowed to be considered for heading
+          percent: 10,
+          // scale percent: percent * (total # of characters in document)/ (scalePercent)
+          // This is useful for documents where headings may appear more than a percent and 
+          // tuning it is difficult so scaling it to the # of characters helps tune it
+          scalePercent: 10000,
+          // ignore this heading is number of fonts triggered is over this number
+          maxNumberFonts: 10
+        },
+        h5: {
+          size: 13,
+          tolerance: 1,
+          percent: 10,
+          scalePercent: 10000,
+          maxNumberFonts: 10
+        },
+      },
+      table:{
+        // remove rows and columns that are empty
+        cleanTable: false,
+        // pad cells so that column lines line up in markdown
+        mdpadCells: true,
+        // UNIMPLEMENTED
+        // set alignment of all columns
+        renderAlignment: 'left',
+        // UNIMPLEMENTED 
+        // embed html to render multiline or other formatting located in cells, otherwise it dumps it on one line
+        embedHtml: false
+      },
+      // UNIMPLEMENTED
+      // Text layout in separate columns
+      // TODO:
+      // range of pages that are multicolumns
+      // tolerance,
+      // percents etc.
+      columns: {},
+      // UNIMPLEMENTED
+      links:{
+        // link to headings within same file, different files etc how to do
+        relativeLinks:{}
+      },
+      images:{
+        // keep images
+        include: true
+      }     
+    }
+    
+    
   }
 }
 module.exports = Markdown;

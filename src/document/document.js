@@ -39,7 +39,18 @@ class Document{
     await this._loadMetaData();
     await this._renderPages(pages,start);
   }
-  
+  async loadDocumentFromData(data,pages,start=1){
+    // Logger.log("Loading PDF from: "+file);
+    // var data = new Uint8Array(fs.readFileSync(file));
+    Logger.info("Loading file into PDFJS");
+    this._pdf = await PDFJS.getDocument(data);
+    Logger.info("File Loaded");
+    Logger.info("Loading metadata");
+    await this._loadMetaData();
+    Logger.info("Starting Render Process");
+    await this._renderPages(pages,start);
+    Logger.info("Render Process Complete");
+  }
   
   /**
    * Loads the document's metadata
@@ -95,8 +106,8 @@ class Document{
    * @return {Date}        
    */
   _getUtc(date,sign,hour,minute){    
-    console.log(sign, Number(sign+hour), Number(sign+minute));
-    console.log(Number(date.getHours()) + Number(sign+hour));
+    // console.log(sign, Number(sign+hour), Number(sign+minute));
+    // console.log(Number(date.getHours()) + Number(sign+hour));
     if(sign == "Z"){
       return date;
     }
@@ -105,18 +116,14 @@ class Document{
     return date;
   }  
   _printCurrentPage(i){
-    Logger.notification("page "+i + " / "+this._doc.numberPages);      
+    Logger.notification(" Rendering page "+i + " / "+this._doc.numberPages);      
   }
   
   async toMarkdown(config,stream){
     //default 8.5" by 11"
     
-    var stream = fs.createWriteStream('test.md', {flags: 'a'});
-    var md = new Markdown({
-      margin:{top:1.5},
-      dimensions:{},
-    },stream);
-   await md.convert(this,stream)
+    var md = new Markdown(config);
+   return await md.convert(this,stream)
   }
   
 }

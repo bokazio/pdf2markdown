@@ -54,8 +54,10 @@ class DocumentAdapter{
     
   }
   getElementsByTagName(n){
-    console.log(n);
-    return [{appendChild:function(element){console.log("append ",element);}}]
+    // console.log(n);
+    return [{appendChild:function(element){
+      // console.log("append ",element);
+    }}]
   }
 }
 class HTMLElement{

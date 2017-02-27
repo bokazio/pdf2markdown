@@ -1,26 +1,31 @@
 var Sequelize = require('sequelize');
 var famRegex = /\"(.+)\"/;
+var Logger = require('../../logger/logger.js');
 class Analyzer{
   static async run(docId, config){
-    // console.log("Running Analsis");
+    Logger.heading("Starting Analysis");
     // returns analysis of document for extraction
-    return {
+    var result = {
       spaces: await Analyzer._measureSpace(docId),
       fonts: await Analyzer._rankFonts(docId,config)
     };
+    Logger.heading("Analysis Complete");
+    return result;
   }  
   //Buggy
   static async _measureSpace(docId){ 
     var spaces = {};
     
     var m = await DB.Font.findAll() 
+    Logger.info("Performing Character Width Calculations on "+m.length+" fonts");
     
+    Logger.log("Creating temporary canvas");
     var Canvas = require('canvas');
     var p = await DB.Page.findById(1);
     var canvas = new Canvas(p.width, p.height);
     var ctx = canvas.getContext('2d');
 
-    
+    Logger.log("Results:");
     for(var i = 0; i < m.length; i++){
       ctx.font = m[i].name;
       var chars = await DB.Character.findAll({
@@ -29,20 +34,20 @@ class Analyzer{
         },
         attributes: [[Sequelize.fn('DISTINCT', Sequelize.col('value')), 'value']]
       })
-      // console.log("Real Width: " +m[i].spaceWidth);
       spaces[m[i].name] = {
         space: ctx.measureText(" "),
         tab: ctx.measureText("\t")
       }
       spaces[m[i].name].space.width *= m[i].spaceWidth;
-      spaces[m[i].name].tab.width *= m[i].spaceWidth;
+      spaces[m[i].name].tab.width *= m[i].spaceWidth;      
+      
       for(var j = 0; j < chars.length; j++){
         spaces[m[i].name][chars[j].value]=ctx.measureText(chars[j].value)
         spaces[m[i].name][chars[j].value].width *= m[i].spaceWidth;
       }
-      
+      Logger.list(["`" + m[i].name + "` - " + chars.length + 2 + " unique chars"]);
     }
-    
+    Logger.info("Space/Tab Calculations Complete");
     return spaces;
   }
   static async _rankFonts(docId,config){
@@ -52,7 +57,11 @@ class Analyzer{
     var styleRank = ["oblique","italic","normal"];
     
     var counts = {};
-    var total = await DB.Character.count();
+    
+    var total = await DB.Character.count();    
+    Logger.info("Classifying Fonts for Headings for " + total + " characters");
+    
+    Logger.log("Calculating Font-Document Percentage");
     for(var i = 0; i < fonts.length; i++){
       var c = await fonts[i].getCharacters({
         where:{
@@ -64,36 +73,37 @@ class Analyzer{
       });
       
       fonts[i].percent = c[0].get({plain: true}).amount / total * 100;
+      Logger.list([fonts[i].name + " " + fonts[i].percent + "%"]);
     }    
     
     
     //TODO: sort by font size then style, then variant
-    fonts.sort((a,b)=>{
-      if(a.percent == 0){
-        return 1
-      }
-      if(b.percent == 0){
-        return -1
-      }
-      var h = b.height-a.height;
-      if(h != 0){
-        return h;
-      }
-      if(a.style != b.style){
-        return styleRank.indexOf(a.style) - styleRank.indexOf(b.style) 
-      }
-      if(a.weight != b.weight){
-        return weightRank.indexOf(a.weight) - weightRank.indexOf(b.weight) 
-      }
-      return a.percent - b.percent;
-    });
+    // fonts.sort((a,b)=>{
+    //   if(a.percent == 0){
+    //     return 1
+    //   }
+    //   if(b.percent == 0){
+    //     return -1
+    //   }
+    //   var h = b.height-a.height;
+    //   if(h != 0){
+    //     return h;
+    //   }
+    //   if(a.style != b.style){
+    //     return styleRank.indexOf(a.style) - styleRank.indexOf(b.style) 
+    //   }
+    //   if(a.weight != b.weight){
+    //     return weightRank.indexOf(a.weight) - weightRank.indexOf(b.weight) 
+    //   }
+    //   return a.percent - b.percent;
+    // });
     
-    if(config.fontStyle){
-      for(var i = 0; i < config.fontStyle.length; i++){
-        var f = fonts.find(f=>f.name == config.fontStyle[i].name);
-        f.style = config.fontStyle[i].style;
-      }
-    }
+    // if(config.fontStyle){
+    //   for(var i = 0; i < config.fontStyle.length; i++){
+    //     var f = fonts.find(f=>f.name == config.fontStyle[i].name);
+    //     f.style = config.fontStyle[i].style;
+    //   }
+    // }
     var tol = (a,b,t)=>{
       return (a-b) <= t && (a-b) >= -t
     }
@@ -110,52 +120,50 @@ class Analyzer{
     // h3 is 20px (1.3em)
     // h4 is   16px   (1em)
     // h5 is 12px (0.8em)
+    Logger.info("Assigning fonts to Headings");
     for(var i = 0; i < fonts.length; i++){
       // H1
-      if(tol(fonts[i].height, config.headings && config.headings.h1 ? config.headings.h1 : 32, 5)){
+      if(tol(fonts[i].height, config.headings.h1.size, config.headings.h1.tolerance)){
           fontRank['1'].push(fonts[i].get({plain: true}));
-      
+          
       // H2    
-      }else if(tol(fonts[i].height, config.headings && config.headings.h2 ? config.headings.h2 : 24, 2)){
+      }else if(tol(fonts[i].height, config.headings.h2.size, config.headings.h2.tolerance)){
           fontRank['2'].push(fonts[i].get({plain: true}));
       
       // H3    
-      }else if(tol(fonts[i].height, config.headings && config.headings.h3 ? config.headings.h3 : 20, 2)){
+      }else if(tol(fonts[i].height, config.headings.h3.size, config.headings.h3.tolerance)){
           fontRank['3'].push(fonts[i].get({plain: true}));
           
       // H4   
-      }else if(tol(fonts[i].height, config.headings && config.headings.h4 ? config.headings.h4 : 16, 1)){
-        if(config.headings && config.headings.percent){
-          if(fonts[i].percent <= config.headings.percent){
-            fontRank['4'].push(fonts[i].get({plain: true}));
-          }
-        }else{
-
-          if(fonts[i].percent <= (1 * total/10000)){
-            fontRank['4'].push(fonts[i].get({plain: true}));
-          }
+      }else if(tol(fonts[i].height, config.headings.h4.size, config.headings.h4.tolerance)){
+        if(fonts[i].percent <= config.headings.h4.percent){
+          fontRank['4'].push(fonts[i].get({plain: true}));
         }
-      }else if(tol(fonts[i].height, config.headings && config.headings.h5 ? config.headings.h5 : 12, 1)){
-        if(config.headings && config.headings.percent){
-          if(fonts[i].percent <= config.headings.percent){
-            fontRank['5'].push(fonts[i].get({plain: true}));
-          }
-        }else{
-          if(fonts[i].percent <= (1 * total/10000)){
-            fontRank['5'].push(fonts[i].get({plain: true}));
-          }
-        }
+      }else if(tol(fonts[i].height, config.headings.h5.size, config.headings.h5.tolerance)){
+        if(fonts[i].percent <= config.headings.h5.percent){
+          fontRank['5'].push(fonts[i].get({plain: true}));
+        }        
       }
     }
+    Logger.log("Heading 1");
+    Logger.list(fontRank['1'].map(f=>f.name));
+    Logger.log("Heading 2");
+    Logger.list(fontRank['2'].map(f=>f.name));
+    Logger.log("Heading 3");
+    Logger.list(fontRank['3'].map(f=>f.name));
+    Logger.log("Heading 4");
+    Logger.list(fontRank['4'].map(f=>f.name));
+    Logger.log("Heading 5");
+    Logger.list(fontRank['5'].map(f=>f.name));
       
     // Too many then clear the heading that had too many
-    var found = false;
-    for(var i = 1; i < 6; i++){
-      if(fontRank[i].length > 10 || found){
-        fontRank[i]=[];
-        found = true;
-      }
-    }
+    // var found = false;
+    // for(var i = 1; i < 6; i++){
+    //   if(fontRank[i].length > 10 || found){
+    //     fontRank[i]=[];
+    //     found = true;
+    //   }
+    // }
     // console.log(fontRank);
     // if(config.fontHeadings){
     //   for(var i = 0; i < config.fontHeadings.length; i++){
@@ -164,16 +172,16 @@ class Analyzer{
     //   }
     // }
     Analyzer._replaceStyles(fonts,config);
-    fonts = fonts.map(f=>f.get({plain: true}));
+    // fonts = fonts.map(f=>f.get({plain: true}));
     return fontRank;
   }
   static _replaceStyles(fonts,config){
-    if(config.fontStyle){
-      for(var i = 0; i < config.fontStyle.length; i++){
-        var f = fonts.find(f=>f.name == config.fontStyle[i].name);
-        f.style = config.fontStyle[i].style;
-      }
-    }
+    // if(config.fontStyle){
+    //   for(var i = 0; i < config.fontStyle.length; i++){
+    //     var f = fonts.find(f=>f.name == config.fontStyle[i].name);
+    //     f.style = config.fontStyle[i].style;
+    //   }
+    // }
   }
   
 }
