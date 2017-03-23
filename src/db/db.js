@@ -100,25 +100,28 @@ class DB {
    * @param  {Boolean} wipe - wipes the database and recreates
    * @return {async}  async - Returns when db has been loaded
    */
-  async load(wipe=true,logging=false){
+  async load(wipe=true,logging=false,postgres=true){
     //Setup DB
-    // this.db = new Sequelize(undefined,undefined,undefined,{
-    //   logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
-    //   storage: FILE,
-    //   dialect: 'sqlite'
-    // });
     
-    this.db = new Sequelize('pdfmarkdown','postgres','postgres',{
-      logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
-      dialect: 'postgres',
-      host: 'localhost',
-      port: 5433,
-      pool: {
-        max: 5,
-        min: 0,
-        idle: 10000
-      },
-    });
+    if(postgres){
+      this.db = new Sequelize('pdfmarkdown','postgres','postgres',{
+        logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
+        dialect: 'postgres',
+        host: 'localhost',
+        port: 5433,
+        pool: {
+          max: 5,
+          min: 0,
+          idle: 10000
+        },
+      });
+    }else{
+      this.db = new Sequelize(undefined,undefined,undefined,{
+        logging: logging ? (e)=>{fs.appendFile("resources/log.log",e+"\n",()=>{});} : false,
+        storage: FILE,
+        dialect: 'sqlite'
+      });
+    }
     this._models();
     this._associations();
     

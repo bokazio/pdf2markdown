@@ -146,22 +146,24 @@ class HeaderFooterExtractor{
   static detectLargeSpaces(line, analysis){
     var largeSpaces = [];
     for(var i=1; i < line.length; i++){
-      // on the same line
-      var sameLine = Math.trunc(line[i].y) == Math.trunc(line[i-1].y) ;
-      // has the same font otherwise space doesnt mean anything
-      var sameFont = line[i].fontName == line[i-1].fontName;
-      
-      // Check if distance between characters is larger than a tab character, then its a a large space
-      // Potential TODO: if different fonts use largest fonts tab character.
-      var largerThanSpace = analysis.spaces[line[i].fontName].tab < (line[i].x - line[i-1].x);
-      
-      if( sameLine && sameFont && largerThanSpace ){
-        largeSpaces.push({
-          // character before the large space
-          before: line[i-1],
-          // character after the large space
-          after: line[i]
-        })
+      if(!line[i].type){
+        // on the same line
+        var sameLine = Math.trunc(line[i].y) == Math.trunc(line[i-1].y) ;
+        // has the same font otherwise space doesnt mean anything
+        var sameFont = line[i].fontName == line[i-1].fontName;
+        
+        // Check if distance between characters is larger than a tab character, then its a a large space
+        // Potential TODO: if different fonts use largest fonts tab character.
+        var largerThanSpace = analysis.spaces[line[i].fontName].tab < (line[i].x - line[i-1].x);
+        
+        if( sameLine && sameFont && largerThanSpace ){
+          largeSpaces.push({
+            // character before the large space
+            before: line[i-1],
+            // character after the large space
+            after: line[i]
+          })
+        }
       }
     }
     return largeSpaces;

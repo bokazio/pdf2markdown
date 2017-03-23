@@ -18,50 +18,37 @@ class ContextAdapter {
     this._font = "10px sans-serif";
     this.font = "10px sans-serif";
   }
+  /**
+   * Push matrix on stack
+   */
   save() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("save("+args+")");
     this.transformStack.push(this.transformMatrix);
-    this.nodeContext.save.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
+  /**
+   * Push matrix on stack
+   */
   restore() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("restore("+args+")");
     this.transformMatrix = this.transformStack.pop();
-    this.nodeContext.restore.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   scale(x, y) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("scale("+args+")");
     var mult = math.matrix([
       [x, 0, 0],
       [0, y, 0],
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
-    this.nodeContext.scale.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("transformMatrix: "+ this.transformMatrix);
   }
   rotate(angle) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.rotate.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("rotate("+args+")");
   }
   translate(x, y) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("translate("+args+")");
     var mult = math.matrix([
       [1, 0, x],
       [0, 1, y],
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
-    this.nodeContext.translate.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("transformMatrix: "+ this.transformMatrix);
   }
   transform(a, b, c, d, e, f) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("transform("+args+")");
     //See https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Transformations
     var mult = math.matrix([
       [a, c, e],
@@ -69,48 +56,27 @@ class ContextAdapter {
       [0, 0, 1]
     ]);
     this.transformMatrix = math.multiply(this.transformMatrix, mult);
-    this.nodeContext.transform.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("transformMatrix: "+ this.transformMatrix);
   }
   setTransform(a, b, c, d, e, f) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
     this.transformMatrix = math.matrix([
       [a, c, e],
       [b, d, f],
       [0, 0, 1]
     ]);
-    // console.log("setTransform("+args+")");
-    this.nodeContext.setTransform.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   clearRect(x, y, w, h) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.clearRect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("clearRect("+args+")");
   }
   fillRect(x, y, w, h) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.fillRect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.error("fillRect("+args+")");
   }
   
   fill() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("fill("+args+")");
-    this.nodeContext.fill.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     this.stroke();
   }
   
   clip() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.clip.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("clip("+args+")");
   }
   fillText(text, x, y, maxWidth) {
-    
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("fillText("+args+")");
     var vector = math.matrix([x, y, 1]);
-    // console.log(this.transformMatrix);
     var nw = math.multiply(this.transformMatrix, vector);
     
     
@@ -127,14 +93,11 @@ class ContextAdapter {
     
     var mTextMetrics = this.measureText("M");
     var spaceTextMetrics = this.measureText(" ");
-    // var tabTextMetrics = this.measureText("\t");
     
     this.font = temp;
     var f = {
       name: this.font.replace(size, ' '+Math.ceil(height)+"px "),
-      // mWidth: mTextMetrics.width,
       spaceWidth: a,
-      // tabWidth: tabTextMetrics.width,
       height: Math.ceil(height),
     }
     
@@ -142,39 +105,33 @@ class ContextAdapter {
     if(this.jsCanvas){
       this.jsCanvas.addCharacter(text, nw.subset(math.index(0)), nw.subset(math.index(1)), f);
     }
-    var ret = this.nodeContext.fillText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log(this.jsCanvas);
-    return ret;
   }
   measureText(text) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("measureText("+args+")");
     this.nodeContext.font = this.font;
     var ret = this.nodeContext.measureText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
 
     return ret;
   }
   bezierCurveTo() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.bezierCurveTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("bezierCurveTo("+args+")");
   }
-  async drawImage(image) {
+  drawImage(image) {
     var args = Array.prototype.slice.call(arguments, 0);
-    var sx, sy, sw, sh, dx, dy, dw, dh = 0;
+    var x, y, sx, sy, sw, sh, dx, dy, dw, dh;
+    x = y = sx = sy = sw = sh = dx = dy = dw = dh = 0;
     var ret;
     var image = image.type === "CanvasAdapter" ? image.nodeCanvas : image
     switch (args.length) {
       case 3:
-        dx = args[1];
-        dy = args[2];
+        x = args[1];
+        y = args[2];
         dw = image.width;
         dh = image.height;
         ret = this.nodeContext.drawImage(image, dx, dy);
+        
         break;
       case 5:
-        dx = args[1];
-        dy = args[2];
+        x = args[1];
+        y = args[2];
         dw = args[3];
         dh = args[4];
         ret = this.nodeContext.drawImage(image, dx, dy, dw, dh);
@@ -184,96 +141,60 @@ class ContextAdapter {
         sy = args[2];
         sw = args[3];
         sh = args[4];
-        dx = args[5];
-        dy = args[6];
+        x = args[5];
+        y = args[6];
         dw = args[7];
         dh = args[8];
         ret = this.nodeContext.drawImage(image, sx, sy, sw, sh, dx, dy, dw, dh);
         break;
     }
-    // console.log("drawImage("+args.slice(1).join(',')+")");
-    // fs.writeFileSync("test/images/img"+(i++)+".png",ctx.canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""), 'base64'); 
+    
+    
     if (this.jsCanvas) {
-      var vectorOrigin = math.matrix([dx, dy, 1]);
-      var vectorXYCorner = math.matrix([dx + dw, dy + dh, 1]);
+      var vectorOrigin = math.matrix([x, y, 1]);
+      var vectorXYCorner = math.matrix([x + dw, y + dh, 1]);
       vectorOrigin = math.multiply(this.transformMatrix, vectorOrigin);
       vectorXYCorner = math.multiply(this.transformMatrix, vectorXYCorner);
-      var x, y, width, height;
-      x = vectorOrigin.subset(math.index(0));
-      y = vectorOrigin.subset(math.index(1));
-      width = math.abs(vectorXYCorner.subset(math.index(0)) - x);
-      height = math.abs(vectorXYCorner.subset(math.index(1)) - y);
-      var tempContext = new Canvas(width,height);
-      var img = image.toDataURL ? image.toDataURL("image/png") : this.nodeContext.canvas.toDataURL("image/png");
+      var nx, ny, width, height;
+      nx = vectorOrigin.subset(math.index(0));
+      ny = vectorOrigin.subset(math.index(1));
+      width = math.abs(vectorXYCorner.subset(math.index(0)) - nx);
+      height = math.abs(vectorXYCorner.subset(math.index(1)) - ny);
       
-      
-      // if(tempContext.toDataURL("image/png") == img || this.isTransparent(img,width,height) ){        
-      //   // console.log("blank!!");
-      // }else{
-        this.jsCanvas.addImage(img, x, y, width, height);  
-      // }
-      
+       if(image.toDataURL){
+        this.jsCanvas.addImage(image.toDataURL("image/png"), nx, ny, width, height);           
+       }else{
+         var tempContext = (new Canvas(dw,dh)).getContext('2d');
+         tempContext.drawImage(image,0,0)// sx, sy, sw, sh, dx, dy, dw, dh);         
+         this.jsCanvas.addImage(tempContext.canvas.toDataURL("image/png"), nx, ny, width, height);  
+       }
+       this._printArgs(arguments);
+    }else{
+      return ret;
     }
-    return ret;
-  }
-  isTransparent(image,width,height){
-    var tempCanvas = new Canvas(width,height);
-    var tempContext = tempCanvas.getContext('2d');
-    var img = new Image();
-    img.src = image;
-    tempContext.drawImage(img,0,0);
-    var imgData = tempContext.getImageData(0,0,width,height);
-    var data=imgData.data;
-    for(var i =0; i< data.length; i+=4){
-      if(data[i+3] < 255){
-        return false;
-      }
-    }
-    // console.log("transparent");
-    return true;
   }
   createImageData(sw, sh) {
-    var args = Array.prototype.slice.call(arguments, 1).join(',');
-    // console.log("createImageData("+args+")");
     var ret = this.nodeContext.createImageData.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // fs.writeFileSync("test/images/img"+(i++)+".png",ctx.canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""), 'base64'); 
-
     return ret;
   }
   getImageData(sx, sy, sw, sh) {
-    var args = Array.prototype.slice.call(arguments, 1).join(',');
     var ret = this.nodeContext.getImageData.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
     return ret;
-    // console.log("getImageData("+args+")");
   }
   putImageData(imageData, x, y) {
-      var args = Array.prototype.slice.call(arguments, 1).join(',');
-      // console.log("putImageData("+args+")");
-      var ret = this.nodeContext.putImageData.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-      // fs.writeFileSync("test/images/img"+(i++)+".png",ctx.canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, ""), 'base64'); 
-
-      return ret;
-    }
-    // putImageData(imageData,dx,dy,dirtyX,dirtyY,dirtyWidth,dirtyHeight){
-    //   var = arguments.callee.toString().substr('function '.length);
-    //   = substr(0,indexOf('('));
-    //   var args = Array.prototype.slice.call(arguments,1).join(',');
-    // console.log("("+args+")");
-    // }
+    var ret = this.nodeContext.putImageData.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
+    return ret;
+  }
+    
   closePath() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("closePath("+args+")");
     var subpath = this.path.find(p=>p.open);
     if(subpath){
       subpath.open = false;
     }
-    this.nodeContext.closePath.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   moveTo(x, y) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
-    // console.log("moveTo("+args+")");
     var subpath = {
       path: [
         {
@@ -286,13 +207,9 @@ class ContextAdapter {
       this.path = [];
     }
     this.path.push(subpath);
-    this.nodeContext.moveTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   beginPath() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("beginPath("+args+")");
     this.path = [];
-    this.nodeContext.beginPath.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   lineTo(x, y) {
     var subpath = this.path.find(p=>p.open);
@@ -300,8 +217,6 @@ class ContextAdapter {
       this.moveTo(0,0);
       subpath = this.path.find(p=>p.open);
     }
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("lineTo("+args+")");
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
       
@@ -310,16 +225,10 @@ class ContextAdapter {
       y: nw.subset(math.index(1))
     };
     subpath.path.push(line);
-    this.nodeContext.lineTo.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   strokeText(){
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("strokeText("+args+")");
-    this.nodeContext.strokeText.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   stroke() {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    // console.log("stroke\n\n");
     if(this.jsCanvas){   
       var r=0;
       var g=0;
@@ -344,15 +253,18 @@ class ContextAdapter {
         });
       }
     }
-    this.nodeContext.stroke.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
   }
   rect(x, y, w, h) {
-    var args = Array.prototype.slice.call(arguments, 0).join(',');
-    this.nodeContext.rect.apply(this.nodeContext, Array.prototype.splice.call(arguments, 0));
-    // console.log("rect("+args+")");
+    
   }
   getJSONCanvas() {
     return this.JSCanvas;
+  }
+  _printArgs(args){
+    args = Array.prototype.slice.call(args, 0).join(',');
+    var stack = new Error().stack,
+    caller = stack.split('\n')[2].trim().match(/ContextAdapter\.([a-zA-Z]+)/)[1];
+    console.log(caller+"("+args+")");
   }
 }
 module.exports = ContextAdapter;

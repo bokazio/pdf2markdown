@@ -1,8 +1,8 @@
 const TableExtractor = require('./table_extractor/table_extractor.js');
 const HeaderFooterExtractor = require('./header_footer_extractor/header_footer_extractor.js');
-
+const ListExtractor = require('./list_extractor/list_extractor.js');
 var Logger = require('../../logger/logger.js');
-
+var MarkdownTools = require('../markdown_tools/markdown_tools.js');
 
 /*
 * Renderer interface
@@ -17,13 +17,17 @@ var Logger = require('../../logger/logger.js');
 
 class Extractor{
   static async run(page, analysis, config){
+    if(!Extractor.fonts){
+      Extractor.fonts = await DB.Font.findAll();        
+    }  
+    Extractor.emptyRegex = /\S+/;
     Extractor.analysis = analysis;
     Extractor.config = config;
     
     
     // Setup
     Extractor.lines = await Extractor.generateLines(page);
-    Extractor.lines = Extractor.createSpaces(Extractor.lines);
+    Extractor.lines = Extractor.createSpaces(Extractor.lines, page, config, analysis);
     Extractor.segments = await Extractor.generateSegments(page);    
     
     
@@ -42,13 +46,12 @@ class Extractor{
     
     
     var headings = Extractor.detectHeading(Extractor.lines);
-    var content = await Extractor.detectFontStyle(Extractor.lines);
     
-    var list = Extractor.extractList(content,page);
+    var content = ListExtractor.run(Extractor.lines, page, config, analysis);
+    content = await Extractor.detectFontStyle(content)
     // for(var i = 0; i < content.length; i++){
     //   content[i] = Extractor.detectListType(content[i],page);
     // }
-    // content = ListExtractor.run()
     content = content.concat(headings).concat(detection.result.tables);
     content.sort((c1,c2)=>{
       var y1 = c1.miny ? c1.miny : c1.y;
@@ -68,30 +71,50 @@ class Extractor{
           // if(list){
           //   console.log(list);
           // }else{
+          // 
+          // 
           
-            var nw =false;
-            var font = Extractor.fonts.find(f=>f.name == line[0].fontName);
-            var height;
-            if(!font){
-              height = 12;
-            }else{
-              height = font.height;
-            }
-            if(i+1 < con.length && ( (con[i+1].map ? con[i+1][0].y : con[i+1].y) - con[i][0].y ) > (height * 1.35) ){
-              nw = true;
-            }
-            gen +=line.map(l=>{            
+            // var nw =false;
+            // var font = Extractor.fonts.find(f=>f.name == line[0].fontName);
+            // var height;
+            // if(!font){
+            //   height = 12;
+            // }else{
+            //   height = font.height;
+            // }
+            // if(i+1 < con.length && ( (con[i+1].map ? con[i+1][0].y : con[i+1].y) - con[i][0].y ) > (height * 1.35) ){
+            //   nw = true;
+            // }
+            // gen +=line.map(l=>{            
+            //   return l.value            
+            // }).join('')
+            // if(nw){
+            //   console.log("ya?");
+            //   gen+="\n\n";
+            // }else{
+            //   if(line[0].value == " " && line.length == 1){
+            //     gen+="\n\n";
+                
+            //   }
+            // }
+            // 
+            // 
+            
+          // }
+          // 
+          gen+=line.map(l=>{  
+              if(l.type === "LINE_BREAK"){
+                l.value="\n\n";
+              }
+              if(l.indent && l.type !== "OL" && l.type !== "UL"){
+                var ret = "";
+                for(var j = 0; j < l.indent; j++){
+                  ret+=">"
+                }
+                return ret + " "+l.value;
+              }          
               return l.value            
             }).join('')
-            if(nw){
-              gen+="\n\n";
-            }else{
-              if(line[0].value == " " && line.length == 1){
-                gen+="\n\n";
-                
-              }
-            }
-          // }
           
         }else{
           var ret = "";
@@ -102,10 +125,15 @@ class Extractor{
             ret+=" "+line.value;
             gen+="\n\n"+ret+"\n";
           }else{
-            
-            if(line.contents.length > 0){
-              gen+= "\n\n"+Table.createTable(line.contents, Table.getMaxWidth(line.contents))+"\n\n"; 
+            if(line.type == "TABLE" && line.value.length > 0){
+              gen+= "\n\n"+Table.createTable(line.value, Table.getMaxWidth(line.value))+"\n\n"; 
               // console.log(line); 
+            }
+            if(line.type == "OL"){
+              gen += "1. "+line.value.line;
+            }
+            if(line.type == "UL"){
+              gen += line.value.line;
             }
 
             
@@ -146,6 +174,46 @@ class Extractor{
     // console.log(extractedPage);
   }
   
+  static addLineBreaks(lines,i){
+    var line = lines[i];
+
+    var nw =false;
+    var font = Extractor.fonts.find(f=>f.name == line[0].fontName);
+    var height;
+    if(!font){
+      height = 12;
+    }else{
+      height = font.height;
+    }
+    
+    var lineSeparation = i+1 < lines.length && ( (lines[i+1].map ? lines[i+1][0].y : lines[i+1].y) - lines[i][0].y ) > (height * 1.35) ;
+    
+    var emptyLine = !line.find(l=>Extractor.emptyRegex.test(l.value));
+    if(lineSeparation || emptyLine){
+      line.push({
+        type: "LINE_BREAK",
+        x: line[line.length-1].x+1,
+        y: line[line.length-1].y
+      })
+    }
+  }
+  
+  // add indent info on all chars
+  static addIndentation(line, page, config, analysis){
+    var index = line.findIndex(l=>l.value !== " " && l.value !== "\t");
+    if(index >= 0){
+      var char = line[index];
+      if(index >0){
+      
+      var indent = MarkdownTools.detectIndentLevel(char, page, config, analysis);
+      if(indent){
+        char.indent = indent;
+        line = line.splice(0,index)
+      }
+      }
+    }
+  }
+  
   static async generateSegments(page){
     return page.getLines();
   }
@@ -168,10 +236,12 @@ class Extractor{
     // }
   }
   
-  static createSpaces(lines){
+  static createSpaces(lines, page, config, analysis){
     lines = lines.sort((l1,l2)=>l1[0].y - l2[0].y);
     for(var i = 0; i < lines.length; i++){
       Extractor.addSpaces(lines[i]);
+      Extractor.addLineBreaks(lines,i);
+      Extractor.addIndentation(lines[i], page, config, analysis);
     }
     return lines;
   }
@@ -264,8 +334,7 @@ class Extractor{
   
   static async detectFontStyle(lines){
     // 
-    var fonts = Extractor.fonts != null ? Extractor.fonts : await DB.Font.findAll();    
-    Extractor.fonts = fonts;
+    var fonts = Extractor.fonts;   
     Extractor.config.boldFonts = ["\"g_d0_f4\", sans-serif"];
     
     //TODO:
@@ -379,7 +448,7 @@ class Extractor{
       var found = Extractor.analysis.fonts[i].find(t=> t.name == line[0].fontName);
       if(found){
         return{
-          value: line.map(l=>l.value).join(''),
+          value: line.map(l=>l.value).join('').replace('','d'),
           level: i,
           y: line[0].y
         }   

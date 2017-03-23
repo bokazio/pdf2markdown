@@ -39,7 +39,7 @@ class Logger{
     }
     var date = new Date()
     var dateString = date.toLocaleString();
-    return colors.dim.cyan("["+dateString+", "+date.getMilliseconds()+"] ");
+    return colors.dim.cyan("["+dateString+", "+date.getMilliseconds().toString().padStart(3)+"] ");
   }
 }
 Logger.timestamps = false;

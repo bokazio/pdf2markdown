@@ -47,7 +47,7 @@ class TableExtractor{
     // return tables, HRs and extraLines
     return {
       result: {
-        tables: grids,
+        tables: TableExtractor._packageTables(grids),
         HRs: filtered.HRs,
         extraLines: filtered.extraLines,
       },
@@ -63,7 +63,7 @@ class TableExtractor{
     return tables.map(t=>{
       return {
         type: "TABLE",
-        value: t,
+        value: t.contents,
         y: t.miny
       }
     })

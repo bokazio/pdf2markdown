@@ -27,17 +27,12 @@ class Markdown{
   } 
   //Currently page dimensions is in inches only, TODO: add other metrics and convert them to inches
   _readConfig(config){
-    this.config = config;
+    this.config = config ? config :this._defaultConfig();
     
     var diagonal = 13.901438774457844;
-    // Dimensions
-    if(config.dimensions && config.dimensions.width && config.dimensions.height){
-      diagonal = Math.sqrt(Math.pow(config.dimensions.width,2) + Math.pow(config.dimensions.height,2));
-      this.config.dimensions.width = config.dimensions.width;
-      this.config.dimensions.height = config.dimensions.height;
-    }
+    
     // RawMargins in inches
-    if(config.margin){
+    if(config && config.margin){
       this.config.rawMargin.right = config.margin.right ? config.margin.right : this.config.rawMargin.right;
       this.config.rawMargin.left = config.margin.left ? config.margin.left : this.config.rawMargin.left;
       this.config.rawMargin.top = config.margin.top ? config.margin.top : this.config.rawMargin.top;
@@ -50,6 +45,7 @@ class Markdown{
       top: this.config.rawMargin.top / diagonal,
       bottom: this.config.rawMargin.bottom / diagonal
     }
+    this.config.ol.regex = this._defaultConfig().ol.regex;
   }
   _defaultConfig(){
     var inchPrecompute = 0.07193500012656064;
@@ -69,7 +65,7 @@ class Markdown{
       },
       ul:{
         // tokens that should match upon to trigger as match for beginning of line
-        tokens: ['\u25A0','-','*','+','•'],
+        tokens: ['\u25A0','-','*','+','\u8226','•'],
         // UNIMPLEMENTED
         // Image hashes to detect as list
         imageHashes: [],
