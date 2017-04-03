@@ -1,4 +1,6 @@
 var colors = require('colors/safe');
+var fs = require('fs');
+
 class Logger{
   static log(txt){
     console.log(this._timestamp() + colors.reset.white(txt));
@@ -40,6 +42,9 @@ class Logger{
     var date = new Date()
     var dateString = date.toLocaleString();
     return colors.dim.cyan("["+dateString+", "+date.getMilliseconds().toString().padStart(3)+"] ");
+  }
+  static file(txt){
+    fs.appendFileSync("test/log.txt",txt); 
   }
 }
 Logger.timestamps = false;

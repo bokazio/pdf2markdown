@@ -9,7 +9,7 @@ class Markdown{
     this.document = "";
   }
   async convert(doc){
-    this.analysis = await Analyzer.run(doc.id,this.config);
+    this.analysis = await Analyzer.run(doc,this.config);
     var doc = await DB.Document.findOne();
     var pages = await doc.getPages();
     var fs = require('fs');
@@ -27,16 +27,16 @@ class Markdown{
   } 
   //Currently page dimensions is in inches only, TODO: add other metrics and convert them to inches
   _readConfig(config){
-    this.config = config ? config :this._defaultConfig();
+    this.config = Object.assign({}, this._defaultConfig(), config);
     
     var diagonal = 13.901438774457844;
     
     // RawMargins in inches
     if(config && config.margin){
-      this.config.rawMargin.right = config.margin.right ? config.margin.right : this.config.rawMargin.right;
-      this.config.rawMargin.left = config.margin.left ? config.margin.left : this.config.rawMargin.left;
-      this.config.rawMargin.top = config.margin.top ? config.margin.top : this.config.rawMargin.top;
-      this.config.rawMargin.bottom = config.margin.bottom ? config.margin.bottom : this.config.rawMargin.bottom;
+      this.config.rawMargin.right = this.config.margin.right;
+      this.config.rawMargin.left = this.config.margin.left;
+      this.config.rawMargin.top = this.config.margin.top;
+      this.config.rawMargin.bottom = this.config.margin.bottom;
     }
     //Precomputed margin value, needs * by page diagonal to get # of pixels for margin
     this.config.margin = {
@@ -83,7 +83,7 @@ class Markdown{
         // (a) sdfsdf
         // a) sdfsdfsdf
         // 1) asdfsdf
-        regex: /(^\s*(\d+\s*\.*|\w\s*\.)\s+)|(^\s*\(?\s*(\d?|\w+)\s*\)\s+)/,
+        regex: /(^\s*(\d+\s*\.*|\w\s*\.)\s+)|(^\s*\(?\s*(\d?|\w{1,3})\s*\)\s+)/,
         // UNIMPLEMENTED
         ignoreList: [],
         // UNIMPLEMENTED

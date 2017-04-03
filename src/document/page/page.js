@@ -30,6 +30,7 @@ class Page{
     });
     
     JSCanvas.setPage(page.id);
+    JSCanvas.setDocument(documentId);
     
     var renderContext = {
       canvasContext: canvas.getContext('2d',JSCanvas),
@@ -56,6 +57,7 @@ class Page{
                       view[3] - a.rect[1] + view[1],
                       a.rect[2],
                       view[3] - a.rect[3] + view[1]]);
+      
       an.push({
         x1: rect[0],
         y1: rect[1],

@@ -1,9 +1,8 @@
 var Logger = require('../../../logger/logger.js');
 
 
-
 class TableRenderer {
-  static render(table){    
+  static render(table){   
     var ret = "\n\n"
     ret += TableRenderer.createTable(table, TableRenderer.getMaxWidth(table))
     ret += "\n\n"; 
@@ -65,7 +64,7 @@ class TableRenderer {
       title+='|';
     }
     for (var i = 0; i < row.length; i++) {
-      title += '  ' + TableRenderer.createCell(row[i], rowBitmap[i], ' ') + '  |';
+      title += '  ' + TableRenderer.createCell(TableRenderer.renderInline(row[i]), rowBitmap[i], ' ') + '  |';
     }
     title += '\n';
     return title;
@@ -120,7 +119,7 @@ class TableRenderer {
       //Go through each row and column an create the rest of the cells
       for (var i = 1; i < rows.length; i++) {
         for (var j = 0; j < rows[i].length; j++) {
-          table += '  ' + TableRenderer.createCell(rows[i][j], rowBitmap[j], ' ') + '  |';
+          table += '  ' + TableRenderer.createCell(TableRenderer.renderInline(rows[i][j]), rowBitmap[j], ' ') + '  |';
 
         }
         if (i + 1 < rows.length) {
@@ -129,6 +128,10 @@ class TableRenderer {
       }
     }
     return table;
+  }
+  static renderInline(elements){
+    var Renderer = require('../renderer.js');
+    return Renderer.renderAll(elements).replace(/\n/g,"");
   }
 }
 module.exports = TableRenderer;

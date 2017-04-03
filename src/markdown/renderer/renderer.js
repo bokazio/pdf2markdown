@@ -1,6 +1,3 @@
-// const TableExtractor = require('./table_extractor/table_extractor.js');
-// const HeaderFooterExtractor = require('./header_footer_extractor/header_footer_extractor.js');
-// const ListExtractor = require('./list_extractor/list_extractor.js');
 var Logger = require('../../logger/logger.js');
 var TableRenderer = require('./table_renderer/table_renderer.js');
 
@@ -16,67 +13,122 @@ var TableRenderer = require('./table_renderer/table_renderer.js');
  */
 
 class Renderer{
-  static async run(content){
+  // TODO add config to include page numbers etc.
+  static async run(content, page, analysis, config){
     // return Renderer.generate(content);
     // return JSON.stringify(content,null,2);
-    return content.reduce(Renderer.renderElement);
+    
+    return "\n\n#Page "+page.number +Renderer.renderAll(content);
+  }
+  static renderAll(content){
+    var output = content.reduce(Renderer.renderElement,"");
+    if(Renderer.bold){
+      output += "**";
+      Renderer.bold = false;
+    }else if(Renderer.italic){
+      output += "_";
+      Renderer.italic = false;
+    }
+    return output;
   }
   static renderElement(prev,element){
     var gen = "";
+    if(Renderer.bold && element.type != "BOLD"){
+      prev += "**";
+      Renderer.bold = false;
+    }else if(Renderer.italic && element.type != "ITALIC"){
+      prev += "_";
+      Renderer.italic = false;
+    }
     switch(element.type){
-      case "LINE_BREAK": gen+="\n\n"; break;
+      case "LINE_BREAK": /*gen+="\nLINE_BREAK\n";*/ break;
       case "TABLE": gen+= TableRenderer.render(element.value); break;
-      default: console.log("NONE for "+element.type);
+      case "PARAGRAPH": gen+= Renderer.renderParagraph(element.value); break;
+      case "IMAGE": gen+= Renderer.renderImage(element); break;
+      case "UL": gen+= Renderer.renderUL(element); break;
+      case "OL": gen+= Renderer.renderOL(element); break;
+      case "HEADING": gen += Renderer.renderHeading(element); break;
+      case "BOLD": gen += Renderer.renderBold(element); break;
+      case "ITALIC": gen += Renderer.renderItalic(element); break;
+      default: gen+= element.value; break;
     }
     return prev + gen;
   }
-  static generate(con){
-    var gen = "";
-    for(var i = 0; i < con.length; i++){
-      var line = con[i];
-      if(line.map){
-        gen+=line.map(l=>{  
-            if(l.type === "LINE_BREAK"){
-              l.value="\n\n";
-            }
-            if(l.indent && l.type !== "OL" && l.type !== "UL"){
-              var ret = "";
-              for(var j = 0; j < l.indent; j++){
-                ret+=">"
-              }
-              return ret + " "+l.value;
-            }          
-            return l.value            
-          }).join('')
-        
-      }else{
-        var ret = "";
-        if(line.level){
-          for(var j = 0; j < line.level; j++){
-            ret+="#"
-          }
-          ret+=" "+line.value;
-          gen+="\n\n"+ret+"\n";
-        }else{
-          if(line.type == "TABLE" && line.value.length > 0){
-            gen+= TableRenderer.render(line.value); 
-            // console.log(line); 
-          }
-          if(line.type == "OL"){
-            gen += "1. "+line.value.line;
-          }
-          if(line.type == "UL"){
-            gen += line.value.line;
-          }
-
-          
-        }
-        
+  static renderParagraph(value){
+    return "\n\n"+value.reduce((res,v,index,arr)=>{
+      if(v.type == "BOLD"){
+        v.value = Renderer.renderBold(v);
+      }else if(v.type == "ITALIC"){
+        v.value = Renderer.renderItalic(v);
       }
-    }
-    return gen;
+      if(Renderer.bold && v.type != "BOLD"){
+        res += "**";
+        Renderer.bold = false;
+      }else if(Renderer.italic && v.type != "ITALIC"){
+        res += "_";
+        Renderer.italic = false;
+      }
+      if(v.indent){
+        var ret = "";
+        for(var j = 0; j < v.indent; j++){
+          ret+=">"
+        }
+        v.value = ret + " "+v.value;
+
+      }
+      // if originally a new line occurred make it a space
+      if(index > 0 && v.y != arr[index-1].y){
+        return res+" "+v.value;
+      } 
+      return res + v.value;
+    },"");
   }
   
+  static renderBold(element){
+    if(!Renderer.bold){
+      Renderer.bold = true;
+      return "**"+element.value;
+    }else{
+      return element.value;
+    }
+  }
+  static renderItalic(element){
+    if(!Renderer.italic){
+      Renderer.italic = true;
+      return "_"+element.value;
+    }else{
+      return element.value;
+    }
+  }
+  
+  static renderUL(element){
+    var extra = element.value.extra;//.reduce((res,l)=>res+(l.value ? l.value : "")," ");;
+    
+    return "\n\n- "+Renderer.renderAll(element.value.line)+Renderer.renderAll(extra)+"\n";
+  }
+  
+  static renderOL(element){
+    var extra = element.value.extra;//.reduce((res,l)=>res+(l.value ? l.value : "")," ");;
+    
+    return "\n1. "+Renderer.renderAll(element.value.line)+Renderer.renderAll(extra)+"\n";
+  }
+  
+  //TODO: allow config of rendering image eg. use width/height etc
+  static renderImage(element){
+    var img = "![]("+"images/"+element.hash+".png ){ width="+element.width+"px height="+element.height+"px } ";
+    //"!["+"images/"+element.hash+"]("+"images/"+element.hash+".png ){ width="+element.width+"px height="+element.height+"px } ";
+    
+    return "\n\n"+img+"\n\n";
+  }
+  static renderHeading(element){
+    var ret = "\n\n";
+    for(var j = 0; j < element.level; j++){
+      ret+="#"
+    }
+    ret+=" "+element.value;
+    ret+="\n";
+    return ret;
+  }  
   
 }
 

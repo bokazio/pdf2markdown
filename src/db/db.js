@@ -55,7 +55,8 @@ class DB {
   _associations(){  
     // Document -> Page
     this.Page.belongsTo(this.Document);
-    this.Document.hasMany(this.Page);
+    this.Document.hasMany(this.Page);    
+    
     // Page -> Character
     this.Character.belongsTo(this.Page);
     this.Page.hasMany(this.Character);
@@ -67,6 +68,9 @@ class DB {
     this.Font.hasMany(this.Character,{
       constraints: false
     });
+    
+    this.Font.belongsTo(this.Document);
+    this.Document.hasMany(this.Font);
     
     // Page -> Line
     this.Line.belongsTo(this.Page);
@@ -91,6 +95,7 @@ class DB {
     // Page -> Annotation
     this.Annotation.belongsTo(this.Page);
     this.Page.hasMany(this.Annotation);
+            
   } 
   
   /**

@@ -2,21 +2,24 @@ var Sequelize = require('sequelize');
 var famRegex = /\"(.+)\"/;
 var Logger = require('../../logger/logger.js');
 class Analyzer{
-  static async run(docId, config){
+  static async run(doc, config){
     Logger.heading("Starting Analysis");
     // returns analysis of document for extraction
+    var pages = await doc._doc.getPages();
     var result = {
-      spaces: await Analyzer._measureSpace(docId),
-      fonts: await Analyzer._rankFonts(docId,config)
+      spaces: await Analyzer._measureSpace(doc._doc),
+      fonts: await Analyzer._rankFonts(doc._doc,config),
+      pageInfo: pages.map(p=>p.get({plain: true})),
     };
     Logger.heading("Analysis Complete");
     return result;
   }  
-  //Buggy
-  static async _measureSpace(docId){ 
+  
+  
+  static async _measureSpace(doc){ 
     var spaces = {};
     
-    var m = await DB.Font.findAll() 
+    var m = await doc.getFonts();
     Logger.info("Performing Character Width Calculations on "+m.length+" fonts");
     
     Logger.log("Creating temporary canvas");
@@ -50,8 +53,8 @@ class Analyzer{
     Logger.info("Space/Tab Calculations Complete");
     return spaces;
   }
-  static async _rankFonts(docId,config){
-    var fonts = await DB.Font.findAll(); 
+  static async _rankFonts(doc,config){
+    var fonts = await doc.getFonts();
     
     var weightRank = ["bolder","bold", "normal", "lighter"];
     var styleRank = ["oblique","italic","normal"];

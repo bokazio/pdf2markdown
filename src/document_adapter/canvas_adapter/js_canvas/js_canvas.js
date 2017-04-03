@@ -57,7 +57,8 @@ class JSCanvas{
         height: font.height,
         style: splt.style,
         weight: splt.weight,
-        family: splt.family
+        family: splt.family,
+        documentId: JSCanvas.documentId,
       }
       JSCanvas.fontQueue.push(JSCanvas.fonts[font.name]);
     }
@@ -81,12 +82,15 @@ class JSCanvas{
     return {
       style: splt[0],
       weight:splt[1],
-      family: font.match(famRegex)[1]
+      family: font.match(famRegex)[1],      
     }
   }
   
   static setPage(id){
     JSCanvas.pageId = id;
+  }
+  static setDocument(id){
+    JSCanvas.documentId = id;
   }
   
   static async done(){

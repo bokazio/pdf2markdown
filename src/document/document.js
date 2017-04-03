@@ -121,7 +121,9 @@ class Document{
   
   async toMarkdown(config,stream){
     //default 8.5" by 11"
-    
+    if(!this._doc){
+      this._doc = await DB.Document.findOne();
+    }
     var md = new Markdown(config);
    return await md.convert(this,stream)
   }

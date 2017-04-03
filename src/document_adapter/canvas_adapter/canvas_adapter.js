@@ -10,7 +10,7 @@ class CanvasAdapter{
     this.height = 200;
     this.type = "CanvasAdapter";
     this.font = font;
-    console.log(this.font);
+    // console.log(this.font);
     
   }
   

@@ -18,7 +18,7 @@ class HeaderFooterExtractor{
     var headerResult = HeaderFooterExtractor.getHeaders(page,lines,config, analysis);
     lines = headerResult.lines;
     
-    var footerResult = HeaderFooterExtractor.getHeaders(page,lines,config, analysis);
+    var footerResult = HeaderFooterExtractor.getFooters(page,lines,config, analysis);
     lines = footerResult.lines;
     
     return {

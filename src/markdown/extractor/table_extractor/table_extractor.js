@@ -427,10 +427,11 @@ class TableExtractor{
       for(var j = 1; j < grid.columns.length; j++){
         // create cell if it doesnt exist
         if(content.length < j){
-          content.push("");
+          content.push([]);
         }
         // add text to cell
-        content[j-1] += row[i].filter(c=> c.x >= grid.columns[j-1] && c.x <= grid.columns[j]).map(c=>c.value).join("")+" ";
+        // content[j-1] += row[i].filter(c=> c.x >= grid.columns[j-1] && c.x <= grid.columns[j]).map(c=>c.value).join("")+" ";
+        content[j-1] = content[j-1].concat(row[i].filter(c=> c.x >= grid.columns[j-1] && c.x <= grid.columns[j]));
       }
     }
     return grid;

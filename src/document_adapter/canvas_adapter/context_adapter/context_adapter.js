@@ -75,6 +75,7 @@ class ContextAdapter {
   
   clip() {
   }
+  // very hot need to optimize
   fillText(text, x, y, maxWidth) {
     var vector = math.matrix([x, y, 1]);
     var nw = math.multiply(this.transformMatrix, vector);
@@ -168,7 +169,7 @@ class ContextAdapter {
          tempContext.drawImage(image,0,0)// sx, sy, sw, sh, dx, dy, dw, dh);         
          this.jsCanvas.addImage(tempContext.canvas.toDataURL("image/png"), nx, ny, width, height);  
        }
-       this._printArgs(arguments);
+       
     }else{
       return ret;
     }
