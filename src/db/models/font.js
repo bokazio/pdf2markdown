@@ -20,9 +20,7 @@ var DOUBLE = sq.DOUBLE;
 
 module.exports = {
   name: {type: TEXT, primaryKey: true},
-  mWidth: DOUBLE,
-  spaceWidth: DOUBLE,
-  tabWidth: DOUBLE,
+  scaleFactorWidth: DOUBLE,
   height: INTEGER,
   style: STRING,
   weight: STRING,
