@@ -3,7 +3,11 @@ var jsdom = require('jsdom').jsdom;
 var Canvas = require('canvas');
 var fs = require('fs');
 var tmp = require('tmp');
+
 class DocumentAdapter{
+  /**
+   * Simple Document-like Adapter that uses jsdom's document object
+   */
   constructor(){
     this.DOM = jsdom().defaultView.document;
     this.documentElement = {
@@ -13,36 +17,15 @@ class DocumentAdapter{
   }
   createElement(element){
     switch(element){
+      // have it use our canvas adapter
       case 'canvas':
-        // var canvas = ;;
-        // this.canvases.push(canvas);
         return new CanvasAdapter(this.font);
+      // Allow it to add styles, currently these are ignored
       case 'style':
         return {
           sheet:{
+            // Might be a way to get more font information here
             insertRule: (rule)=>{
-              // var args = Array.prototype.slice.call(arguments, 0).join(',');
-              // console.log("insertRule(",JSON.stringify(rule));
-              // // this.font.push(rule);
-              // var index = rule.indexOf("base64,");
-              // var r = rule.slice(index+7, -3)
-              // console.log(r);
-              
-              // var tmpFile = tmp.fileSync();
-              
-              // var writer = fs.createWriteStream(tmpFile.name);
-              // writer.write(atob(r));
-              // writer.end();
-              // var reg = /font-family:\"(.+)\";src:url/
-              // var fontFamily = rule.match(reg)[1];
-              
-              // this.font[fontFamily] = tmpFile.name;
-              // this.canvases.forEach(c=>{
-              //   c.addFont(fontFamily, tmpFile.name);
-              // })
-              // tmpFile.removeCallback();
-              
-              //cssRules.push(arguments[0]);
             },
             cssRules: []
           }
@@ -50,9 +33,15 @@ class DocumentAdapter{
     }
     return {width:0,height:0}
   }
+  /**
+   * Not implemented but it is called.
+   */
   setAttributeNS(){
     
   }
+  /**
+   * we dont really care we just want pdf.js to be happy
+   */
   getElementsByTagName(n){
     // console.log(n);
     return [{appendChild:function(element){
@@ -60,6 +49,9 @@ class DocumentAdapter{
     }}]
   }
 }
+/**
+ * we dont really care we just want pdf.js to be happy
+ */
 class HTMLElement{
   
 }

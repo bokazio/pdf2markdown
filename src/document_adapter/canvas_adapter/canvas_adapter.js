@@ -9,14 +9,9 @@ class CanvasAdapter{
     this.width = 200;
     this.height = 200;
     this.type = "CanvasAdapter";
-    this.font = font;
-    // console.log(this.font);
-    
+    this.font = font;    
   }
   
-  // addFont(fontFamily, file){
-  //   this.nodeCanvas.registerFont
-  // }
   
   /**
    * Creates a context
