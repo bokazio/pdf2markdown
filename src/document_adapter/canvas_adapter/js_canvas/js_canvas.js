@@ -1,12 +1,20 @@
-//var Character = require('./js_canvas_elements/character.js');
-var timer = require('timers');
 var md5 = require('blueimp-md5');
-var fs = require('fs');
 var Logger = require('../../../logger/logger.js');
+// detect font family
 var famRegex = /(\".+\".*)/;
 
+/**
+ * Generate Canvas Elements for sent to the DB, 
+ * Static class to prevent generating new object on each page since this is hot
+ */
 class JSCanvas{
+  /**
+   * Add a line to the canvas and queues it for DB insert
+   * @param {Array} path Path of all lines drawn to the canvas
+   * @param {Object} info Color and width information
+   */
   static addLine(path,info){
+    // Go through all paths and subpaths and build lines
     for(var i = 0; i < path.length; i++){
       for(var j = 1; j < path[i].path.length; j++){
         JSCanvas.lineQueue.push({
@@ -25,7 +33,14 @@ class JSCanvas{
         
     }
   }
-  
+  /**
+   * Add an Image to the canvas and queues it for DB insert
+   * @param {Object} image  
+   * @param {Number} x      
+   * @param {Number} y      
+   * @param {Number} width  
+   * @param {Number} height 
+   */
   static addImage(image,x,y,width,height){
     image = image.replace(/^data:image\/png;base64,/, "");
     JSCanvas.imageQueue.push({
@@ -37,6 +52,13 @@ class JSCanvas{
       height: height,
     });
   }
+  /**
+   * Add a Character to the canvas and queue it for DB insert
+   * @param {[type]} char [description]
+   * @param {[type]} x    [description]
+   * @param {[type]} y    [description]
+   * @param {[type]} font [description]
+   */
   static addCharacter(char,x,y,font){    
     JSCanvas.charQueue.push({
       pageId: JSCanvas.pageId,
@@ -46,14 +68,19 @@ class JSCanvas{
       value: char,
     })
   }
+  /**
+   * Get a font or generate one
+   * @param  {Object} font 
+   * @return {String}      name of the font
+   */
   static getFont(font){   
     if(!JSCanvas.fonts.hasOwnProperty(font.name)){
+      // get attributes from the font
       var splt = JSCanvas._getFont(font.name);
+      // add reference and queue it
       JSCanvas.fonts[font.name] = {
         name: font.name,
-        mWidth: font.mWidth,
-        spaceWidth: font.spaceWidth,
-        tabWidth: font.tabWidth,
+        scaleFactorWidth: font.scaleFactorWidth,
         height: font.height,
         style: splt.style,
         weight: splt.weight,
@@ -64,6 +91,11 @@ class JSCanvas{
     }
     return font.name;
   }
+  /**
+   * Either queue the image if the image does not exist, use an md5 hash to check for a match
+   * @param  {Object} image 
+   * @return {String}       hash of the image
+   */
   static getImage(image){    
     var name = md5(image);
     if(!JSCanvas.images.hasOwnProperty(name)){
@@ -76,7 +108,12 @@ class JSCanvas{
     return name;
   }
   
-  /* style | weight | size | family | type */
+  /**
+   * Get properties from the font
+   * style | weight | size | family | type
+   * @param  {Object} font 
+   * @return {Object}      style weight and family of the font
+   */
   static _getFont(font){
     var splt = font.split(' ');
     return {
@@ -85,31 +122,31 @@ class JSCanvas{
       family: font.match(famRegex)[1],      
     }
   }
-  
+  /**
+   * Set the current page
+   * @param {Number} id PageId
+   */
   static setPage(id){
     JSCanvas.pageId = id;
   }
+  /**
+   * Set the current document
+   * @param {Number} id DocumentId
+   */
   static setDocument(id){
     JSCanvas.documentId = id;
   }
-  
-  static async done(){
-    // if(JSCanvas.imageDataQueue.length > 0){
-    //   await DB.ImageData.bulkCreate(JSCanvas.imageDataQueue);
-    // }
-    // if(JSCanvas.imageQueue.length > 0){
-    //   await DB.Image.bulkCreate(JSCanvas.imageQueue);
-    // }
-    // if(JSCanvas.fontQueue.length > 0){
-    //   await DB.Font.bulkCreate(JSCanvas.fontQueue);
-    // }
+  /**
+   * Bulk insert characters into the DB and clear queue
+   */
+  static async done(){    
     await DB.Character.bulkCreate(JSCanvas.charQueue);
-    // await DB.Line.bulkCreate(JSCanvas.lineQueue);
-    JSCanvas.charQueue = [];
-    
+    JSCanvas.charQueue = [];    
   }
+  /**
+   * Bulk insert Lines, font, images, and imageData and clear their queues
+   */
   static async finish(){
-
     await DB.Line.bulkCreate(JSCanvas.lineQueue);
     await DB.Font.bulkCreate(JSCanvas.fontQueue);
     await DB.ImageData.bulkCreate(JSCanvas.imageDataQueue);
@@ -120,6 +157,8 @@ class JSCanvas{
     JSCanvas.fontQueue = [];
   }
 }
+
+// Initial queues
 JSCanvas.imageQueue = [];
 JSCanvas.imageDataQueue = [];
 JSCanvas.charQueue = [];
