@@ -5,6 +5,7 @@ var package = require('./package.json');
 var path = require('path');
 var fs = require('fs');
 
+// Prevent nodemodule from being bundled
 var nodeModules = {};
 fs.readdirSync('node_modules')
   .filter(function(x) {
@@ -13,6 +14,7 @@ fs.readdirSync('node_modules')
   .forEach(function(mod) {
     nodeModules[mod] = 'commonjs ' + mod;
   });
+  
 // Webpack Setup
 module.exports = {
     entry: ['babel-polyfill',package.paths.src],
@@ -35,11 +37,6 @@ module.exports = {
             loaders: ["future-loader?development"]
         }],
     },
-    externals: nodeModules,
-        // new webpack.optimize.UglifyJsPlugin({
-        //     mangle: {
-        //       except: ['Document', 'Revision', 'Guideline', 'Information', 'User', 'Base', 'TestClass']
-        //     }
-        // }),   //Production Minimizer
+    externals: nodeModules
     
 }
