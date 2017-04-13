@@ -3,18 +3,31 @@ var Analyzer = require('./analyzer/analyzer.js');
 var Extractor = require('./extractor/extractor.js');
 var Logger = require('../logger/logger.js');
 class Markdown{
+  /**
+   * Setup defalt markdown config or override it
+   * @param  {Object} config overridden config
+   * @param  {Object} stream Not Implemented
+   */
   constructor(config,stream){
     this._readConfig(config);
     this.spaces = {};
     this.document = "";
   }
+  
+  /**
+   * Convert a document to markdown
+   * @param  {[type]} doc [description]
+   * @return {[type]}     [description]
+   */
   async convert(doc){
+    // start analysis
     this.analysis = await Analyzer.run(doc,this.config);
-    var doc = await DB.Document.findOne();
-    var pages = await doc.getPages();
-    var fs = require('fs');
-    fs.writeFileSync("test/fannie.md","");
     
+    // get all pages in the doc
+    var pages = await doc._doc.getPages();
+    
+    // go through each page and  extract and render the page
+    // TODO: use renderer here not in extractor,    
     for(var i = 0; i<pages.length; i++){
       Logger.info("Extracting page "+(i+1)+"/"+pages.length);
       this.document += (await Extractor.run(pages[i],this.analysis,this.config));
@@ -22,10 +35,13 @@ class Markdown{
     }
     return this.document;
   } 
-  _render(){
-    
-  } 
-  //Currently page dimensions is in inches only, TODO: add other metrics and convert them to inches
+  
+  /**
+   * Overwrites default config with user specified
+   * Currently page dimensions is in inches only, TODO: add other metrics and convert them to inches
+   * @param  {Object} config User Config
+   * @return {Object}        [Config
+   */
   _readConfig(config){
     this.config = Object.assign({}, this._defaultConfig(), config);
     
@@ -148,13 +164,13 @@ class Markdown{
           size: 16,
           tolerance: 1,
           // Number up to 100 correspondng to the maximum percent allowed to be considered for heading
-          percent: 10,
+          // percent: 10,
           // scale percent: percent * (total # of characters in document)/ (scalePercent)
           // This is useful for documents where headings may appear more than a percent and 
           // tuning it is difficult so scaling it to the # of characters helps tune it
-          scalePercent: 10000,
+          // scalePercent: 10000,
           // ignore this heading is number of fonts triggered is over this number
-          maxNumberFonts: 10
+          // maxNumberFonts: 10
         },
         h5: {
           size: 13,

@@ -9,9 +9,9 @@ class HeaderFooterExtractor{
   /**
    * Extract Headers and Footers from the page
    * @param  {Page} page   Current page
-   * @param  {[type]} lines  [description]
-   * @param  {[type]} config [description]
-   * @return {[type]}        [description]
+   * @param  {Array} lines  All lines on the page
+   * @param  {Object} config User config
+   * @return {Object}        Headers, footers, and the filtered lines
    */
   static run(page, lines, config, analysis){
     Logger.debug("Extracting Headers and Footers");

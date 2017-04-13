@@ -69,6 +69,7 @@ class DB {
       constraints: false
     });
     
+    // Document -> Font
     this.Font.belongsTo(this.Document);
     this.Document.hasMany(this.Font);
     
