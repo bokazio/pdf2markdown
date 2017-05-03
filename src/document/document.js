@@ -47,7 +47,7 @@ class Document{
    * @param  {Uint8Array} data  byte array
    * @param  {Number} pages How many pages to process
    * @param  {Number} start page to process
-   * @return {[type]}       [description]
+   * @return {async}       [description]
    */
   async loadDocumentFromData(data,pages,start=1){
     Logger.info("Loading file into PDFJS");
